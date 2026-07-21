@@ -1,76 +1,62 @@
-# DarkDive — Índice de Documentação SDD
+# DarkDive
 
-> Este projeto usa **Spec-Driven Development (SDD)** com IA.
-> Toda feature começa em uma spec aprovada antes de qualquer linha de código.
+> A narrative horror game for iOS, played entirely through a chat interface. You guide an
+> anonymous stranger trapped in a city outside of time — you never live the story, you only
+> send messages and read what happens next.
 
----
+Built with **Spec-Driven Development (SDD)** and AI assistance (Claude Code + Antigravity).
+Every feature starts as an approved spec before any code is written — no vibe coding.
 
-## 🧭 Navegação Rápida
+## Start here
 
-| Documento | Propósito |
-|-----------|-----------|
-| [AGENTS.md](./AGENTS.md) | Regras globais para todos os agentes de IA |
-| [docs/vision.md](./docs/vision.md) | Visão de alto nível do produto |
-| [docs/architecture.md](./docs/architecture.md) | Arquitetura técnica e decisões |
+| If you want to… | Read |
+|-----------------|------|
+| Understand the product | [`docs/vision.md`](docs/vision.md) |
+| Understand the tech | [`docs/architecture.md`](docs/architecture.md) |
+| **Understand how we use AI** (specs, skills, subagents) | [`docs/ai-workflow.md`](docs/ai-workflow.md) |
+| Know the rules every AI agent follows | [`CLAUDE.md`](CLAUDE.md) (`AGENTS.md` is a symlink to it) |
 
----
+## Specs
 
-## 📋 Specs
-
-> Toda feature deve ter uma spec aprovada antes de ser implementada.
+Every feature is a spec in [`docs/specs/`](docs/specs/), created from
+[`_template.md`](docs/specs/_template.md).
 
 | Nº | Spec | Status |
 |----|------|--------|
-| 001 | [Chat UI](./docs/specs/001-chat-ui.md) | `draft` |
-| — | [Template para novas specs](./docs/specs/_template.md) | — |
+| 001 | [Chat UI](docs/specs/001-chat-ui.md) | `approved` |
 
----
+Planned next: 002 Game Engine · 003 UI + Engine integration · 004+ state variables ·
+005+ persistence · 006+ on-device AI · 007+ i18n. See the roadmap in `docs/vision.md`.
 
-## 🤖 Agentes & IA
+## AI scaffolding in this repo
 
-| Documento | Propósito |
-|-----------|-----------|
-| [Agents](./docs/agents/agents.md) | Catálogo de agentes |
-| [Skills](./docs/agents/skills.md) | Skills reutilizáveis |
-| [Subagents](./docs/agents/subagents.md) | Subagentes especializados |
-| [Workflows](./docs/agents/workflows.md) | Fluxos orquestrados |
+- **[`CLAUDE.md`](CLAUDE.md)** — project context + rules, auto-loaded every Claude Code session.
+- **[`.claude/skills/generate-spec/`](.claude/skills/generate-spec/SKILL.md)** — skill: turn an idea into a spec.
+- **[`.claude/agents/spec-reviewer.md`](.claude/agents/spec-reviewer.md)** — subagent: check an implementation against a spec's acceptance criteria.
+- **[`docs/adr/`](docs/adr/)** — architecture decision records.
+- **[`docs/decisions/`](docs/decisions/)** — design-session notes and learning material.
 
----
+MCP, RAG, hooks, and plugins are intentionally **not** set up — see `docs/ai-workflow.md`
+for why (short version: an offline single-player game doesn't need them yet).
 
-## 🔧 Infraestrutura de IA
+## The workflow
 
-| Documento | Propósito |
-|-----------|-----------|
-| [MCP](./docs/mcp/mcp.md) | Model Context Protocol |
-| [RAG](./docs/rag/rag.md) | Retrieval-Augmented Generation |
-| [Harness](./docs/harness/harness.md) | Testes e validação |
-| [Progressive Disclosure](./docs/progressive-disclosure/progressive-disclosure.md) | Contexto em camadas |
-| [Plugins](./docs/plugins/plugins.md) | Extensões do sistema |
-| [Hooks](./docs/hooks/hooks.md) | Pontos de extensão do ciclo de vida |
+1. **Idea** → discuss (usually with Antigravity), note big sessions in `docs/decisions/`.
+2. **Spec** → `generate-spec` → refine → mark `approved`.
+3. **Implement** → in Claude Code: "implement spec NNN". It reads `CLAUDE.md` + the spec.
+4. **Review** → `spec-reviewer` subagent checks it against the acceptance criteria.
+5. **Commit**, mark the spec `implemented`, repeat.
 
----
+## Building
 
-## 📐 Decisões Arquiteturais (ADRs)
+Requires Xcode (iOS 17+ target). Build from the command line:
 
-| ADR | Título | Status |
-|-----|--------|--------|
-| [ADR-001](./docs/adr/ADR-001-template.md) | Template | — |
+```bash
+xcodebuild -project DarkDive.xcodeproj -scheme DarkDive \
+  -destination 'platform=iOS Simulator,name=iPhone 15' build
+```
 
----
+## Status
 
-## 🚀 Como Contribuir
-
-1. **Nova feature?** → Criar spec em `docs/specs/` usando o template
-2. **Spec aprovada?** → Claude Code via terminal implementa
-3. **Código gerado?** → Claude Sonnet no Antigravity revisa contra a spec
-4. **Decisão importante?** → Criar ADR em `docs/adr/`
-
----
-
-## 🛠️ Skills Disponíveis (.agents/skills/)
-
-| Skill | Descrição |
-|-------|-----------|
-| [generate-spec](./.agents/skills/generate-spec/SKILL.md) | Gera specs a partir de PRDs |
-| [code-review](./.agents/skills/code-review/SKILL.md) | Revisa código contra specs |
-| [rag-query](./.agents/skills/rag-query/SKILL.md) | Consulta base de conhecimento |
+Docs and SDD scaffolding are in place. Spec 001 is approved but not yet implemented — the
+Swift code is still the Xcode starter template. Implementing spec 001 is the next step.
