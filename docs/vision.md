@@ -1,4 +1,4 @@
-# Vision — DarkDive
+# Vision — DeepDive
 
 > High-level product vision document.
 
@@ -14,7 +14,7 @@ dread of being the safe one on the other end of the line, powerless except throu
 
 ## Solution
 
-DarkDive is a narrative horror game played entirely through a chat interface.
+DeepDive is a narrative horror game played entirely through a chat interface.
 
 **Core concept:**
 

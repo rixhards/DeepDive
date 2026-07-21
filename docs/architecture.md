@@ -1,10 +1,10 @@
-# Architecture — DarkDive
+# Architecture — DeepDive
 
 > Architectural decisions and technical view of the system.
 
 ## Overview
 
-DarkDive is a single-target native iOS app. Everything runs on-device: there is no backend,
+DeepDive is a single-target native iOS app. Everything runs on-device: there is no backend,
 no network dependency, and (in v1) no AI. The narrative is data; the engine is a
 deterministic state machine; the UI is a chat.
 

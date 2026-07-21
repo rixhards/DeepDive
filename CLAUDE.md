@@ -1,4 +1,4 @@
-# CLAUDE.md — DarkDive
+# CLAUDE.md — DeepDive
 
 > This file is loaded automatically at the start of every Claude Code session, and is the
 > canonical instruction file for **any** AI agent on this project (Claude Code, Antigravity,
@@ -7,7 +7,7 @@
 
 ## What this project is
 
-**DarkDive** is a narrative horror game for **native iOS**, played entirely through a chat
+**DeepDive** is a narrative horror game for **native iOS**, played entirely through a chat
 interface. The player guides an anonymous stranger trapped in a city outside of time
 (loosely inspired by the Ratanabá legend). The player never lives the story — they only
 send messages and read what happens next.
@@ -75,7 +75,7 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
 - Build/test from the command line with **`xcodebuild`** (lighter than the Xcode MCP):
   ```bash
-  xcodebuild -project DarkDive.xcodeproj -scheme DarkDive -destination 'platform=iOS Simulator,name=iPhone 15' build
+  xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 15' build
   ```
 - Run the app or take screenshots via the `/run` skill when you need to see a change working.
 

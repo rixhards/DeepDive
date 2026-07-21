@@ -5,7 +5,7 @@
 
 ## Context
 
-DarkDive is played entirely through a chat conversation with an anonymous stranger trapped
+DeepDive is played entirely through a chat conversation with an anonymous stranger trapped
 in a city outside of time. The chat interface is not a wrapper around the game — it *is*
 the medium the fiction is delivered through, so its credibility carries the immersion.
 

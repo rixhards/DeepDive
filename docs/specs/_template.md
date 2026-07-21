@@ -1,4 +1,4 @@
-# Spec Template — DarkDive
+# Spec Template — DeepDive
 
 > Use este template ao criar novas specs. Copie para `docs/specs/NNN-feature-name.md`.
 

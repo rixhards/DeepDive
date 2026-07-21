@@ -1,4 +1,4 @@
-# DarkDive
+# DeepDive
 
 > A narrative horror game for iOS, played entirely through a chat interface. You guide an
 > anonymous stranger trapped in a city outside of time — you never live the story, you only
@@ -52,7 +52,7 @@ for why (short version: an offline single-player game doesn't need them yet).
 Requires Xcode (iOS 17+ target). Build from the command line:
 
 ```bash
-xcodebuild -project DarkDive.xcodeproj -scheme DarkDive \
+xcodebuild -project DeepDive.xcodeproj -scheme DeepDive \
   -destination 'platform=iOS Simulator,name=iPhone 15' build
 ```
 

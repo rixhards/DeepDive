@@ -1,4 +1,4 @@
-# DarkDive — Sessão de Decisões de Design (2026-07-20)
+# DeepDive — Sessão de Decisões de Design (2026-07-20)
 
 > Este documento registra TODAS as decisões tomadas na sessão de /grill-me entre o desenvolvedor (Richard) e o agente Antigravity. Use este documento como fonte de verdade para preencher `vision.md`, `AGENTS.md`, `architecture.md` e `spec 001`.
 
@@ -6,10 +6,10 @@
 
 ## Contexto do Projeto
 
-**Nome:** DarkDive (renomeado de POC_EscapeRoom)
+**Nome:** DeepDive (renomeado de POC_EscapeRoom)
 **Tipo:** Jogo de terror narrativo em formato de chat
 **Status:** Projeto real (não é mais POC)
-**Repositório:** `/Users/richardsiacc/Documents/Academy Projects/IA-Challenge/DarkDive`
+**Repositório:** `/Users/richardsiacc/Documents/Academy Projects/IA-Challenge/DeepDive`
 
 ---
 

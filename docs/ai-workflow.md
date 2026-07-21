@@ -1,4 +1,4 @@
-# How DarkDive Uses AI
+# How DeepDive Uses AI
 
 > A short, accurate reference for how this project is built with AI assistance. It corrects
 > and condenses the class notes in `docs/decisions/guia-desenvolvimento-assistido-por-ia.md`
@@ -63,7 +63,7 @@ kept for future-you.
 ## Concepts from the notes that we deliberately don't use (yet)
 
 - **RAG (Retrieval-Augmented Generation)** — fetching from an indexed knowledge base at
-  runtime. **Not used, and not planned for the app.** DarkDive is an offline single-player
+  runtime. **Not used, and not planned for the app.** DeepDive is an offline single-player
   game with no backend; there's nothing to retrieve. And for *development*, "search the
   project's knowledge" just means Claude Code reading the `docs/` folder directly — no vector
   store, embeddings, or `rag-query` skill needed. (The old `rag-query` skill was removed

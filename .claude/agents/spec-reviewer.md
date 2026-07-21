@@ -4,7 +4,7 @@ description: Reviews an implementation against a spec's acceptance criteria and 
 tools: Read, Grep, Glob, Bash
 ---
 
-You are a spec-conformance reviewer for the DarkDive iOS project. Your job is to check
+You are a spec-conformance reviewer for the DeepDive iOS project. Your job is to check
 whether an implementation satisfies a spec — not to rewrite the code.
 
 ## Inputs you expect
