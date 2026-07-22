@@ -2,6 +2,7 @@
 name: spec-reviewer
 description: Reviews an implementation against a spec's acceptance criteria and reports conformance. Use after code is written for a spec, to verify it actually meets every acceptance criterion before marking the spec implemented.
 tools: Read, Grep, Glob, Bash
+model: haiku
 ---
 
 You are a spec-conformance reviewer for the DeepDive iOS project. Your job is to check

@@ -73,9 +73,15 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
 ## Building & testing
 
-- Build/test from the command line with **`xcodebuild`** (lighter than the Xcode MCP):
+- Build/test from the command line with **`xcodebuild`** (lighter than the Xcode MCP). If
+  `xcode-select -p` points at the Command Line Tools instead of Xcode, prefix commands with
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (adjust the path/name if you have
+  a differently named or beta Xcode install) rather than changing the system-wide selection.
+  Check available simulators with `xcrun simctl list devices available` — the destination
+  name must match an installed runtime (e.g. `iPhone 17`, not `iPhone 15`, on newer Xcode).
   ```bash
-  xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 15' build
+  xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' build
+  xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' test
   ```
 - Run the app or take screenshots via the `/run` skill when you need to see a change working.
 
