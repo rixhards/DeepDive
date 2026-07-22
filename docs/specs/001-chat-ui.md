@@ -1,7 +1,7 @@
 # Spec 001 — Chat UI
 
 ## Status
-`approved`
+`implemented`
 
 ## Context
 
@@ -150,3 +150,4 @@ screen; the mock data boundary defined here is what spec 003 replaces.
 |------|--------|--------|
 | 2026-07-20 | Antigravity + Richard | Initial creation from the /grill-me design session |
 | 2026-07-20 | Claude Code | Filled from session decisions; status → `approved` |
+| 2026-07-21 | Claude Code | Implemented `ChatView`/`ChatViewModel`/mock conversation; reviewed against all acceptance criteria; status → `implemented` |

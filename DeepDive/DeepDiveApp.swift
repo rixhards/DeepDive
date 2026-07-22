@@ -11,7 +11,8 @@ import SwiftUI
 struct DeepDiveApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ChatView()
+                .preferredColorScheme(.dark)
         }
     }
 }
