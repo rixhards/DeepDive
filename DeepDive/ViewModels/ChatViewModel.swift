@@ -8,42 +8,57 @@ import Observation
 
 @Observable
 final class ChatViewModel {
+    enum ChatState {
+        case loading
+        case ready
+        case failed(Error)
+    }
+
+    private(set) var state: ChatState = .loading
     private(set) var messages: [ChatMessage] = []
-    private(set) var currentOptions: [ConversationOption] = []
+    private(set) var currentOptions: [ChatOption] = []
     private(set) var isTyping = false
     private(set) var isFinished = false
 
-    private var currentNodeID: String
-    private let nodesByID: [String: ConversationNode]
+    private let engineProvider: () throws -> GameEngine
+    private var engine: GameEngine?
     private var deliveryTask: Task<Void, Never>?
     private var hasStarted = false
 
-    init(
-        conversation: [ConversationNode] = MockConversation.nodes,
-        startNodeID: String = MockConversation.startNodeID
-    ) {
-        self.nodesByID = Dictionary(uniqueKeysWithValues: conversation.map { ($0.id, $0) })
-        self.currentNodeID = startNodeID
+    init(engineProvider: @escaping () throws -> GameEngine = { try GameEngine(bundle: .main) }) {
+        self.engineProvider = engineProvider
     }
 
-    /// Kicks off the conversation. Safe to call from `onAppear`; only runs once.
+    /// Loads the engine and kicks off the conversation. Safe to call from `onAppear`; only runs once.
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
-        deliverCurrentNode()
+
+        do {
+            let engine = try engineProvider()
+            self.engine = engine
+            state = .ready
+            deliverWithTypingDelay(engine.start())
+        } catch {
+            state = .failed(error)
+        }
     }
 
-    func select(_ option: ConversationOption) {
-        guard !isTyping, !isFinished else { return }
-        isTyping = true
+    func select(_ option: ChatOption) {
+        guard !isTyping, !isFinished, let engine else { return }
         currentOptions = []
         messages.append(ChatMessage(text: option.text, sender: .player, timestamp: Date()))
-        currentNodeID = option.nextNodeID
-        deliverCurrentNode()
+
+        do {
+            let response = try engine.advance(choosing: option.id)
+            deliverWithTypingDelay(response)
+        } catch {
+            print("GameEngine error advancing conversation: \(error)")
+            isFinished = true
+        }
     }
 
-    private func deliverCurrentNode() {
-        guard let node = nodesByID[currentNodeID] else { return }
+    private func deliverWithTypingDelay(_ response: EngineResponse) {
         isTyping = true
 
         // Owned by the view model (not a SwiftUI `.task`), so it survives the
@@ -55,12 +70,12 @@ final class ChatViewModel {
             guard !Task.isCancelled else { return }
 
             isTyping = false
-            messages.append(ChatMessage(text: node.characterText, sender: .character, timestamp: Date()))
+            messages.append(ChatMessage(text: response.characterText, sender: .character, timestamp: Date()))
 
-            if node.options.isEmpty {
+            if response.isTerminal {
                 isFinished = true
             } else {
-                currentOptions = node.options
+                currentOptions = response.options.map { ChatOption(id: $0.id, text: $0.text) }
             }
         }
     }

@@ -6,8 +6,8 @@
 import SwiftUI
 
 struct OptionButtonsView: View {
-    let options: [ConversationOption]
-    let onSelect: (ConversationOption) -> Void
+    let options: [ChatOption]
+    let onSelect: (ChatOption) -> Void
 
     var body: some View {
         ScrollView {
@@ -43,8 +43,8 @@ struct OptionButtonsView: View {
         Theme.background.ignoresSafeArea()
         OptionButtonsView(
             options: [
-                ConversationOption(text: "não sei onde estou", nextNodeID: "a"),
-                ConversationOption(text: "me ajuda", nextNodeID: "b"),
+                ChatOption(id: "a", text: "não sei onde estou"),
+                ChatOption(id: "b", text: "me ajuda"),
             ],
             onSelect: { _ in }
         )

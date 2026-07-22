@@ -9,6 +9,18 @@ struct ChatView: View {
     @State private var viewModel = ChatViewModel()
 
     var body: some View {
+        Group {
+            if case .failed(let error) = viewModel.state {
+                ErrorView(error: error)
+            } else {
+                chatBody
+            }
+        }
+        .background(Theme.background.ignoresSafeArea())
+        .onAppear { viewModel.start() }
+    }
+
+    private var chatBody: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 header
@@ -47,8 +59,6 @@ struct ChatView: View {
                 }
             }
         }
-        .background(Theme.background.ignoresSafeArea())
-        .onAppear { viewModel.start() }
     }
 
     private static let typingIndicatorID = "typing-indicator"
