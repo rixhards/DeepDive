@@ -21,15 +21,21 @@ final class ChatViewModel {
     private(set) var isFinished = false
 
     private let engineProvider: () throws -> GameEngine
+    private let sessionRepository: SessionRepository?
     private var engine: GameEngine?
     private var deliveryTask: Task<Void, Never>?
     private var hasStarted = false
 
-    init(engineProvider: @escaping () throws -> GameEngine = { try GameEngine(bundle: .main) }) {
+    init(
+        engineProvider: @escaping () throws -> GameEngine = { try GameEngine(bundle: .main) },
+        sessionRepository: SessionRepository? = try? SessionRepository()
+    ) {
         self.engineProvider = engineProvider
+        self.sessionRepository = sessionRepository
     }
 
-    /// Loads the engine and kicks off the conversation. Safe to call from `onAppear`; only runs once.
+    /// Loads the engine (restoring a saved session if one exists) and kicks off the
+    /// conversation. Safe to call from `onAppear`; only runs once.
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
@@ -37,8 +43,20 @@ final class ChatViewModel {
         do {
             let engine = try engineProvider()
             self.engine = engine
-            state = .ready
-            deliverWithTypingDelay(engine.start())
+
+            if let session = sessionRepository?.load() {
+                try engine.restore(EngineState(currentNodeID: session.currentNodeID, flags: session.flags, ints: session.ints))
+                messages = session.messages
+                state = .ready
+                // The save always happens right after `advance()`, before the character's
+                // reply for the new node is generated — so a restored session always has a
+                // pending reply to catch up on. A short fixed delay reads as "catching up"
+                // rather than the normal 1–3 s thinking pause.
+                deliverWithTypingDelay(engine.start(), delay: 0.5)
+            } else {
+                state = .ready
+                deliverWithTypingDelay(engine.start())
+            }
         } catch {
             state = .failed(error)
         }
@@ -51,6 +69,7 @@ final class ChatViewModel {
 
         do {
             let response = try engine.advance(choosing: option.id)
+            saveSession(engine: engine)
             deliverWithTypingDelay(response)
         } catch {
             print("GameEngine error advancing conversation: \(error)")
@@ -58,14 +77,25 @@ final class ChatViewModel {
         }
     }
 
-    private func deliverWithTypingDelay(_ response: EngineResponse) {
+    private func saveSession(engine: GameEngine) {
+        let state = engine.state
+        let session = GameSession(
+            currentNodeID: state.currentNodeID,
+            flags: state.flags,
+            ints: state.ints,
+            messages: messages
+        )
+        try? sessionRepository?.save(session)
+    }
+
+    private func deliverWithTypingDelay(_ response: EngineResponse, delay explicitDelay: Double? = nil) {
         isTyping = true
 
         // Owned by the view model (not a SwiftUI `.task`), so it survives the
         // view disappearing/backgrounding and the reply is never lost.
         deliveryTask = Task { [weak self] in
             guard let self else { return }
-            let delay = Double.random(in: 1...3)
+            let delay = explicitDelay ?? Double.random(in: 1...3)
             try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled else { return }
 
@@ -74,6 +104,7 @@ final class ChatViewModel {
 
             if response.isTerminal {
                 isFinished = true
+                try? sessionRepository?.delete()
             } else {
                 currentOptions = response.options.map { ChatOption(id: $0.id, text: $0.text) }
             }

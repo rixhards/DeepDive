@@ -12,6 +12,12 @@ enum GameEngineError: Error, Equatable {
     case unknownOption(String)
 }
 
+struct EngineState: Equatable {
+    let currentNodeID: String
+    let flags: [String: Bool]
+    let ints: [String: Int]
+}
+
 final class GameEngine {
     private let nodesByID: [String: StoryNode]
     private var flags: [String: Bool] = [:]
@@ -32,8 +38,21 @@ final class GameEngine {
         try self.init(story: story)
     }
 
+    var state: EngineState {
+        EngineState(currentNodeID: currentNodeID, flags: flags, ints: ints)
+    }
+
     func start() -> EngineResponse {
         response(for: currentNodeID)
+    }
+
+    func restore(_ state: EngineState) throws {
+        guard nodesByID[state.currentNodeID] != nil else {
+            throw GameEngineError.unknownNode(state.currentNodeID)
+        }
+        currentNodeID = state.currentNodeID
+        flags = state.flags
+        ints = state.ints
     }
 
     @discardableResult
