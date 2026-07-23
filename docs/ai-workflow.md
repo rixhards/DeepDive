@@ -1,7 +1,7 @@
 # How DeepDive Uses AI
 
 > A short, accurate reference for how this project is built with AI assistance. It corrects
-> and condenses the class notes in `docs/decisions/guia-desenvolvimento-assistido-por-ia.md`
+> and condenses the class notes in `docs/decisions/ai-assisted-development-guide.md`
 > and, crucially, only describes things that are **actually set up in this repo**.
 >
 > If a concept is useful *in general* but not used here yet, it's marked **(not used yet)**
@@ -77,10 +77,13 @@ kept for future-you.
   running tests; nothing needs them today.
 - **Plugins** (e.g. Superpowers) — bundles of skills/hooks/subagents installed together.
   **(not used yet.)** We're keeping the setup minimal and hand-made so it's understandable.
-- **Runtime AI in the game** — deferred until the game loop is proven. When it lands, it is
-  bound by the golden rule: *AI interprets and narrates; the Game Engine owns state.*
 
-## Corrections to the class notes (`guia-...md`)
+This list is about *development-tooling* concepts (how Claude Code/Antigravity work), not
+the shipped app's own AI feature. The game's runtime AI (`IntentParser` + `Narrator`, both
+Foundation Models, Specs 006–007) **is** implemented — see `docs/architecture.md`'s "AI /
+Agents" section — and is a separate concern from the list above.
+
+## Corrections to the class notes (`ai-assisted-development-guide.md`)
 
 The notes are mostly right; these factual points were off:
 

@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel = ChatViewModel()
+    @State private var inputText = ""
 
     var body: some View {
         Group {
@@ -52,9 +53,10 @@ struct ChatView: View {
                     }
                 }
 
-                if !viewModel.currentOptions.isEmpty && !viewModel.isTyping {
-                    OptionButtonsView(options: viewModel.currentOptions) { option in
-                        viewModel.select(option)
+                if case .ready = viewModel.state, !viewModel.isTyping, !viewModel.isFinished {
+                    ComposerView(text: $inputText, isDisabled: false) {
+                        viewModel.send(inputText)
+                        inputText = ""
                     }
                 }
             }

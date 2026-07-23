@@ -23,10 +23,15 @@ Every feature is a spec in [`docs/specs/`](docs/specs/), created from
 
 | Nº | Spec | Status |
 |----|------|--------|
-| 001 | [Chat UI](docs/specs/001-chat-ui.md) | `approved` |
+| 001 | [Chat UI](docs/specs/001-chat-ui.md) | `implemented` |
+| 002 | [Game Engine](docs/specs/002-game-engine.md) | `implemented` |
+| 003 | [UI + Engine Integration](docs/specs/003-ui-engine-integration.md) | `implemented` |
+| 004 | [State Variables](docs/specs/004-state-variables.md) | `implemented` |
+| 005 | [Persistence](docs/specs/005-persistence.md) | `implemented` |
+| 006 | [On-Device AI — Intent Parsing](docs/specs/006-on-device-ai-intent-parsing.md) | `implemented` |
+| 007 | [Dynamic Narration](docs/specs/007-dynamic-narration.md) | `implemented` |
 
-Planned next: 002 Game Engine · 003 UI + Engine integration · 004+ state variables ·
-005+ persistence · 006+ on-device AI · 007+ i18n. See the roadmap in `docs/vision.md`.
+Planned next: 008+ Menu + Achievements · 009+ App Intents / Siri.
 
 ## AI scaffolding in this repo
 
@@ -49,14 +54,14 @@ for why (short version: an offline single-player game doesn't need them yet).
 
 ## Building
 
-Requires Xcode (iOS 17+ target). Build from the command line:
+Requires Xcode (iOS 26+ target). Build from the command line:
 
 ```bash
 xcodebuild -project DeepDive.xcodeproj -scheme DeepDive \
-  -destination 'platform=iOS Simulator,name=iPhone 15' build
+  -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 ## Status
 
-Docs and SDD scaffolding are in place. Spec 001 is approved but not yet implemented — the
-Swift code is still the Xcode starter template. Implementing spec 001 is the next step.
+Specs 001–007 are implemented. The Xcode project targets iOS 26+ (Foundation Models /
+Apple Intelligence). Planned next: 008+ Menu + Achievements.

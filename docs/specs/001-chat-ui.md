@@ -20,19 +20,27 @@ buttons, a typing indicator, and auto-scroll — driven entirely by hardcoded mo
 
 ## Acceptance Criteria
 
-- [ ] A single chat screen renders a scrollable list of messages
-- [ ] Player messages and chat-character messages are visually distinct (alignment and
+- [x] A single chat screen renders a scrollable list of messages
+- [x] Player messages and chat-character messages are visually distinct (alignment and
       bubble color)
-- [ ] The visual style is dark: black / dark-grey background, subtle timestamps
-- [ ] Each message shows a subtle timestamp
-- [ ] Option buttons appear inline, below the chat character's latest message
-- [ ] Tapping an option turns it into a sent player message, as if the player had typed it
-- [ ] After a choice, the option buttons disappear until the next character message arrives
-- [ ] The character's reply arrives after a delay of 1–3 seconds
-- [ ] A "typing…" animation (three pulsing dots) is shown during that delay
-- [ ] The list auto-scrolls to the newest message after every new message
-- [ ] All content is mocked/hardcoded — no game engine, no JSON, no AI
-- [ ] There is no free-text input field
+- [x] The visual style is dark: black / dark-grey background, subtle timestamps
+- [x] Each message shows a subtle timestamp
+- [x] Option buttons appear inline, below the chat character's latest message
+- [x] Tapping an option turns it into a sent player message, as if the player had typed it
+- [x] After a choice, the option buttons disappear until the next character message arrives
+- [x] The character's reply arrives after a delay of 1–3 seconds
+- [x] A "typing…" animation (three pulsing dots) is shown during that delay
+- [x] The list auto-scrolls to the newest message after every new message
+- [x] All content is mocked/hardcoded — no game engine, no JSON, no AI
+- [x] There is no free-text input field
+
+> **All criteria above were true when this spec was completed and reviewed** (checkboxes
+> were never actually ticked at the time — a doc-hygiene bug fixed in a later review pass).
+> Several have since been **intentionally superseded** by later specs and no longer describe
+> the current app: option buttons → free-text composer (Spec 006); the 1–3 s fixed delay →
+> a delay scaled to the narrated reply's length (Specs 006–007); "no game engine/JSON/AI" →
+> all three now exist (Specs 002, 006, 007). This spec's criteria remain an accurate record
+> of what Spec 001 itself delivered.
 
 ## Expected Behavior
 

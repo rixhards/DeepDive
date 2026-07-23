@@ -13,7 +13,6 @@ enum Theme {
     static let characterBubble = Color(white: 0.16)
     static let playerBubble = Color.accentColor
     static let timestampColor = Color.white.opacity(0.5)
-    static let optionBorder = Color.accentColor
     static let optionBackground = Color.white.opacity(0.08)
 
     static let bubbleCornerRadius: CGFloat = 16

@@ -32,14 +32,14 @@ do not silently guess scope.
 
 ## Golden rules (non-negotiable)
 
-- **AI never owns game state.** When runtime AI is eventually added, Foundation Models only
-  *interpret* the player's words and *narrate* in character. The **Game Engine** decides
+- **AI never owns game state.** Foundation Models only *interpret* the player's words
+  (`IntentParser`) and *narrate* in character (`Narrator`). The **Game Engine** decides
   every consequence and owns all state. AI proposes; the engine disposes.
 - **No new dependencies.** The app uses only Apple frameworks. Adding any dependency
   requires an ADR in `docs/adr/`.
 - **Stay in scope.** Do not build things listed under "Out of Scope" in `docs/vision.md`.
-- **Narrative content is data, not code.** Once the engine exists, story text lives in JSON
-  (decoded with `Codable`), never hardcoded in Swift.
+- **Narrative content is data, not code.** Story text lives in JSON (decoded with
+  `Codable`), never hardcoded in Swift.
 - **No real people as characters.** Do not depict real individuals tied to Amazonian
   legends (researchers, real Indigenous people, missing explorers).
 
@@ -47,14 +47,14 @@ do not silently guess scope.
 
 | Area | Choice |
 |------|--------|
-| Platform | Native iOS, **iOS 17+** (no visionOS, no cross-platform) |
+| Platform | Native iOS, **iOS 26+** (no visionOS, no cross-platform) |
 | UI | SwiftUI |
 | Architecture | MVVM with `@Observable` |
 | Dependencies | Swift Package Manager (currently none) |
 | Game engine | Local finite state machine (FSM) in pure Swift — deterministic, offline |
 | Narrative format | JSON + `Codable` (data-driven) |
-| Persistence (v1) | None — each session starts fresh |
-| Runtime AI (v1) | None — validate the game loop first |
+| Persistence | SwiftData, single auto-saved session slot |
+| Runtime AI | Foundation Models — `IntentParser` (free text → option) + `Narrator` (brief → in-character prose) |
 
 Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
@@ -105,6 +105,7 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
 ## Current status (2026-07)
 
-Documentation and SDD scaffolding are in place. **Spec 001 (Chat UI) is `approved` but not
-yet implemented** — the Swift code is still the empty Xcode template. Implementing spec 001
-is the next step.
+Specs 001–007 are implemented: chat UI, game engine, state variables, persistence, and the
+full on-device AI layer (free-text intent parsing + dynamic narration). Deployment target is
+**iOS 26+** (Foundation Models / Apple Intelligence required). Next up: 008+ Menu +
+Achievements.
