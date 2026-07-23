@@ -1,0 +1,53 @@
+{
+  "startNodeID": "start",
+  "initialState": { "sanity": 65, "trust": 50 },
+  "nodes": [
+    {
+      "id": "start",
+      "characterText": "você confia em mim?",
+      "options": [
+        {
+          "id": "opt_trust",
+          "text": "sim, confio",
+          "nextNodeID": "branch",
+          "effects": [{ "var": "trust", "delta": 20 }]
+        },
+        {
+          "id": "opt_distrust",
+          "text": "não confio em ninguém aqui",
+          "nextNodeID": "branch",
+          "effects": [
+            { "var": "trust", "delta": -30 },
+            { "var": "sanity", "delta": -10 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branch",
+      "characterText": "tudo bem. seguimos.",
+      "options": [
+        {
+          "id": "opt_high_trust",
+          "text": "vem comigo por aqui",
+          "nextNodeID": "trusted_end",
+          "conditions": [{ "var": "trust", "op": "gte", "value": 60 }]
+        },
+        {
+          "id": "opt_low_sanity",
+          "text": "eu... não sei mais o que é real",
+          "nextNodeID": "unstable_end",
+          "conditions": [{ "var": "sanity", "op": "lte", "value": 60 }]
+        },
+        {
+          "id": "opt_default",
+          "text": "continua andando em silêncio",
+          "nextNodeID": "neutral_end"
+        }
+      ]
+    },
+    { "id": "trusted_end", "characterText": "seguimos juntos, finalmente.", "options": [] },
+    { "id": "unstable_end", "characterText": "nada mais faz sentido.", "options": [] },
+    { "id": "neutral_end", "characterText": "o caminho continua.", "options": [] }
+  ]
+}

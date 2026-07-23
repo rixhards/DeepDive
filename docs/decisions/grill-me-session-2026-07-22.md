@@ -72,4 +72,40 @@ A Spec 003 incluirá **testes de integração leves** no target `DeepDiveTests`:
 
 ---
 
-*Gerado em 2026-07-22 por Antigravity (Gemini/Claude Sonnet) durante sessão /grill-me com Richard.*
+## Decisões — Spec 004 (State Variables)
+
+### 1. Tipos de variáveis
+- **Flags booleanas** `[String: Bool]` — já existem, mantidas.
+- **Inteiros** `[String: Int]` — novos, para `sanity` e `trust`.
+
+### 2. Variáveis ativas na Spec 004
+- `sanity` (Int, 0–100) — saúde mental do personagem-chat.
+- `trust` (Int, 0–100) — confiança do personagem-chat no jogador.
+- Flags booleanas existentes continuam funcionando.
+
+### 3. Manifestação no jogo
+Variáveis influenciam **apenas quais opções aparecem** (via `conditions`). O jogador nunca vê os números diretamente — percebe os efeitos pelos caminhos que se abrem ou fecham. Zero mudança visual na UI.
+
+### 4. Operadores de condition
+Suporte a:
+- `bool_flag == true/false` (já existe)
+- `int_var >= N`
+- `int_var <= N`
+
+Não há suporte a `>`, `<`, `!=`, nem expressões compostas (AND/OR) nesta spec.
+
+### 5. Modelo de effects
+- **Flags bool:** `{ "var": "found_key", "set": true }` (já existe)
+- **Inteiros — delta:** `{ "var": "sanity", "delta": -10 }`
+- **Inteiros — absoluto:** `{ "var": "sanity", "set": 50 }`
+Ambos os modos de effect para inteiros devem ser suportados.
+
+### 6. Valores iniciais
+Definidos no `story.json` via campo `initialState` na raiz: `{ "sanity": 80, "trust": 50 }`. A `GameEngine` carrega esses valores na inicialização, antes de qualquer nó ser processado.
+
+### 7. Validação no story.json
+O `story.json` principal permanece simples (sem ramificações condicionais). Um **cenário de teste separado** (`story-spec004-fixture.json`) será criado apenas para os testes, com ao menos 2 ramificações condicionais baseadas em `sanity` e `trust`.
+
+---
+
+*Gerado em 2026-07-22–23 por Antigravity (Claude Sonnet) durante sessão /grill-me com Richard.*
