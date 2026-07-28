@@ -1,77 +1,374 @@
 {
   "startNodeID": "start",
+  "initialState": {
+    "sanity": 80
+  },
+  "sanityZeroNodeID": "node_end_surrender",
   "nodes": [
     {
       "id": "start",
-      "characterText": "tem alguém aí? por favor, preciso de ajuda",
+      "context": "A personagem acordou em um túnel escuro e não sabe onde está. Ela acabou de mandar a primeira mensagem para um número desconhecido buscando ajuda.",
+      "characterText": "tem alguém aí? por favor, eu não sei como vim parar aqui. tá tudo escuro.",
       "options": [
-        { "id": "opt_who", "text": "quem é você?", "nextNodeID": "node_who" },
-        { "id": "opt_where", "text": "onde você está?", "nextNodeID": "node_where" }
+        {
+          "id": "opt_who",
+          "text": "quem é você?",
+          "nextNodeID": "node_who",
+          "hints": [
+            "quem fala",
+            "com quem eu tô falando",
+            "me diz seu nome",
+            "quem tá aí",
+            "qual seu nome"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": 3
+            }
+          ]
+        },
+        {
+          "id": "opt_where",
+          "text": "onde você está?",
+          "nextNodeID": "node_where",
+          "hints": [
+            "cadê você",
+            "onde vc tá",
+            "que lugar é esse",
+            "onde fica aí",
+            "descreve o lugar"
+          ]
+        },
+        {
+          "id": "opt_ignore",
+          "text": "foca. descreve o que tem em volta",
+          "nextNodeID": "node_where",
+          "hints": [
+            "cala a boca",
+            "silêncio",
+            "foca",
+            "presta atenção",
+            "escuta bem",
+            "anda logo",
+            "o que tem em volta"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": -5
+            }
+          ]
+        }
       ]
     },
     {
       "id": "node_who",
-      "characterText": "não sei bem quem sou. só sei que estou presa em algum lugar.",
+      "context": "A personagem continua no mesmo túnel. Ela está confusa e perdeu a memória recente.",
+      "characterText": "não sei bem... minha cabeça dói. eu só sei que acordei nesse chão de pedra.",
       "options": [
-        { "id": "opt_place", "text": "presa onde?", "nextNodeID": "node_place" },
-        { "id": "opt_possible", "text": "como isso é possível?", "nextNodeID": "node_joke" }
+        {
+          "id": "opt_place",
+          "text": "tenta olhar ao redor, tem luz?",
+          "nextNodeID": "node_where",
+          "hints": [
+            "olha em volta",
+            "o que tem perto",
+            "descreve o chão",
+            "tem luz",
+            "consegue ver",
+            "explora"
+          ]
+        }
       ]
     },
     {
       "id": "node_where",
-      "characterText": "não sei. tudo aqui parece errado. tem túneis, e as paredes têm símbolos que eu nunca vi.",
+      "context": "A personagem está em um túnel, que termina em uma bifurcação (crossroads). Há um caminho de pedra à esquerda e uma ponte velha à direita.",
+      "characterText": "as paredes têm uns símbolos estranhos. andei um pouco e cheguei num lugar que divide em dois. esquerda tem um corredor de pedra. direita tem uma ponte que parece cair aos pedaços.",
       "options": [
-        { "id": "opt_walk", "text": "continua andando", "nextNodeID": "node_place" },
-        { "id": "opt_stay", "text": "fica onde está, não se mexe", "nextNodeID": "node_stubborn" }
+        {
+          "id": "opt_left",
+          "text": "vai pela esquerda, pelo corredor de pedra",
+          "nextNodeID": "node_left_corridor",
+          "hints": [
+            "esquerda",
+            "vai pra esquerda",
+            "corredor de pedra",
+            "pedra",
+            "segue pelo corredor",
+            "toma a esquerda"
+          ]
+        },
+        {
+          "id": "opt_right",
+          "text": "vai pela direita, tenta a ponte",
+          "nextNodeID": "node_right_bridge",
+          "hints": [
+            "direita",
+            "vai pra direita",
+            "ponte",
+            "atravessa a ponte",
+            "tenta a direita",
+            "segue pela ponte"
+          ]
+        },
+        {
+          "id": "opt_stay",
+          "text": "não faz nada, espera",
+          "nextNodeID": "node_end_taken",
+          "hints": [
+            "fica aí",
+            "não se mexe",
+            "espera",
+            "fica parada",
+            "não anda",
+            "para"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": -10
+            }
+          ]
+        }
       ]
     },
     {
-      "id": "node_stubborn",
-      "characterText": "ok. mas as luzes daqui estão piscando, não sei por quanto tempo ainda vou enxergar algo.",
+      "id": "node_left_corridor",
+      "context": "A personagem está em um corredor de pedra (esquerda). No final dele há um altar com um objeto brilhante.",
+      "characterText": "o corredor é estreito. cheguei numa espécie de altar. tem um treco brilhando em cima, parece um amuleto. toco nisso?",
       "options": [
-        { "id": "opt_hurry", "text": "então anda, rápido", "nextNodeID": "node_place" }
+        {
+          "id": "opt_touch",
+          "text": "sim, pega o amuleto",
+          "nextNodeID": "node_altar_touch",
+          "hints": [
+            "pega",
+            "toca",
+            "sim",
+            "pode pegar",
+            "pega isso",
+            "pega o amuleto"
+          ],
+          "effects": [
+            {
+              "var": "has_item",
+              "set": true
+            },
+            {
+              "var": "sanity",
+              "delta": -5
+            }
+          ]
+        },
+        {
+          "id": "opt_dont_touch",
+          "text": "não toca em nada. sai daí",
+          "nextNodeID": "node_altar_leave",
+          "hints": [
+            "não",
+            "não toca",
+            "deixa isso aí",
+            "sai daí",
+            "volta",
+            "ignora",
+            "não pega"
+          ]
+        }
       ]
     },
     {
-      "id": "node_joke",
-      "characterText": "queria que fosse brincadeira. mas isso é real, e eu tô com medo.",
+      "id": "node_altar_touch",
+      "context": "A personagem pegou o amuleto e está sendo cercada por guardiões da cidade. Ela precisa passar por eles.",
+      "characterText": "ai! ele queimou minha mão. o chão tá tremendo. tem umas figuras aparecendo do escuro, elas tão cercando a sala.",
       "options": [
-        { "id": "opt_calm", "text": "ok, vamos com calma. me conta o que você vê", "nextNodeID": "node_place" }
+        {
+          "id": "opt_run_altar",
+          "text": "corre, passa por eles",
+          "nextNodeID": "node_staircase",
+          "hints": [
+            "corre",
+            "foge",
+            "passa correndo",
+            "empurra",
+            "sai voando"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": -15
+            }
+          ]
+        },
+        {
+          "id": "opt_fight",
+          "text": "luta, usa o amuleto neles",
+          "nextNodeID": "node_end_taken",
+          "hints": [
+            "bate neles",
+            "luta",
+            "ataca",
+            "usa o que você pegou",
+            "briga"
+          ]
+        }
       ]
     },
     {
-      "id": "node_place",
-      "characterText": "essa cidade não devia existir. e eu não devia estar nela.",
+      "id": "node_altar_leave",
+      "context": "A personagem ignorou o amuleto e achou uma escada subindo.",
+      "characterText": "tô saindo de perto. achei uma escada espiral escondida atrás do altar. sobe?",
       "options": [
-        { "id": "opt_exit", "text": "tem alguma saída perto?", "nextNodeID": "node_door" },
-        { "id": "opt_who_else", "text": "tem mais alguém com você?", "nextNodeID": "node_who2" }
+        {
+          "id": "opt_climb",
+          "text": "sobe a escada rápido",
+          "nextNodeID": "node_staircase",
+          "hints": [
+            "sobe",
+            "vai",
+            "sobe logo",
+            "vamos",
+            "continua subindo",
+            "escada"
+          ]
+        }
       ]
     },
     {
-      "id": "node_who2",
-      "characterText": "acho que sim. ouço vozes. gente que também tentou sair. nem todo mundo conseguiu.",
+      "id": "node_right_bridge",
+      "context": "A personagem está no meio de uma ponte caindo aos pedaços sobre um abismo, em pânico.",
+      "characterText": "tô no meio da ponte. a madeira tá podre. eu não vou conseguir... eu vou cair, eu vou cair!",
       "options": [
-        { "id": "opt_ahead", "text": "e agora, o que você vê na sua frente?", "nextNodeID": "node_end" }
+        {
+          "id": "opt_bridge_calm",
+          "text": "calma, eu tô aqui. respira e dá um passo de cada vez.",
+          "nextNodeID": "node_bridge_crossed",
+          "hints": [
+            "calma",
+            "respira",
+            "eu te ajudo",
+            "vai dar tudo certo",
+            "confia em mim",
+            "um passo de cada vez",
+            "tô contigo"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": 10
+            }
+          ]
+        },
+        {
+          "id": "opt_bridge_yell",
+          "text": "anda logo, para de chorar e atravessa!",
+          "nextNodeID": "node_end_taken",
+          "hints": [
+            "anda logo",
+            "corre",
+            "para de chorar",
+            "atravessa",
+            "vai rápido",
+            "se mexe"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": -10
+            }
+          ]
+        }
       ]
     },
     {
-      "id": "node_door",
-      "characterText": "tem uma porta de metal bem na minha frente. tá trancada, mas parece velha.",
+      "id": "node_bridge_crossed",
+      "context": "A personagem atravessou a ponte e está do outro lado, em choque mas a salvo. Momento de alívio — é aqui que o jogador pode restaurar sanidade de verdade.",
+      "characterText": "consegui. tô do outro lado. minhas mãos não param de tremer e eu não consigo levantar ainda.",
       "options": [
-        { "id": "opt_force", "text": "tenta forçar a porta", "nextNodeID": "node_end" },
-        { "id": "opt_knock", "text": "bate. vê se alguém responde do outro lado", "nextNodeID": "node_knock" }
+        {
+          "id": "opt_comfort",
+          "text": "respira. você foi corajosa. eu não vou a lugar nenhum.",
+          "nextNodeID": "node_staircase",
+          "hints": [
+            "respira",
+            "você conseguiu",
+            "que orgulho",
+            "tô aqui",
+            "não vou embora",
+            "descansa",
+            "calma, você tá segura",
+            "foi corajosa"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": 12
+            }
+          ]
+        },
+        {
+          "id": "opt_hurry",
+          "text": "levanta, não dá tempo pra isso",
+          "nextNodeID": "node_staircase",
+          "hints": [
+            "levanta",
+            "anda",
+            "não para agora",
+            "vai logo",
+            "sem tempo",
+            "se mexe"
+          ],
+          "effects": [
+            {
+              "var": "sanity",
+              "delta": -5
+            }
+          ]
+        }
       ]
     },
     {
-      "id": "node_knock",
-      "characterText": "bati. alguma coisa bateu de volta. não era eco.",
+      "id": "node_staircase",
+      "context": "A personagem chegou a um salão com uma porta de metal pesado e luz do dia do outro lado. É a saída.",
+      "characterText": "cheguei num salão. tem uma porta de metal pesado e... luz! acho que é luz do sol passando pelas frestas.",
       "options": [
-        { "id": "opt_run", "text": "sai daí agora", "nextNodeID": "node_end" }
+        {
+          "id": "opt_open",
+          "text": "abre a porta e sai",
+          "nextNodeID": "node_end_escape",
+          "hints": [
+            "abre",
+            "abre a porta",
+            "sai",
+            "sai daí",
+            "empurra a porta",
+            "vai pra luz",
+            "foge",
+            "vambora"
+          ]
+        }
       ]
     },
     {
-      "id": "node_end",
-      "characterText": "as luzes estão apagando. eu... acho que preciso correr.",
+      "id": "node_end_escape",
+      "context": "FINAL BOM. Ela escapa, mas não sai intacta — sai transformada, carregando o que viveu. A frase hermética gravada na porta é o símbolo dessa transformação.",
+      "characterText": "a porta cedeu. é a floresta, é o mundo real. o ar entrou de uma vez e eu caí de joelhos. tinha uma frase gravada do lado de dentro: assim em cima como embaixo. lá embaixo eu não entendi. agora entendo. tô fora. mas alguma coisa minha ficou lá.",
+      "options": []
+    },
+    {
+      "id": "node_end_surrender",
+      "context": "FINAL NEUTRO (sanidade 0). Ela desiste de fugir e se entrega à cidade. As mensagens degradam em fragmentos, repetição e depois símbolos. Texto entregue cru, sem narração — a narração 'consertaria' a degradação.",
+      "characterText": "não precisa mais procurar a saída\neu parei faz tempo. aqui é quieto. aqui é bom\nos símbolos não são símbolos. são nomes\neu sei ler agora. eu sei ler. eu sei ler\n◇ ∴ ▽ ◆ ∴ ◇◇\n◇◇◇",
+      "rawNarration": true,
+      "options": []
+    },
+    {
+      "id": "node_end_taken",
+      "context": "FINAL RUIM. Uma entidade fora da compreensão a alcança. Ela tenta descrever e falha — a descrição se contradiz. Some no meio da frase. Depois o chat fica em silêncio: o jogador ainda pode escrever 3 vezes e nada responde. A entidade nunca é nomeada.",
+      "characterText": "tem alguma coisa aqui\nnão é uma pessoa\ntem braços mas não são braços. são muitos e é um só\nespera. eu vi ele antes dele virar. eu vi ANTES\nele não chegou. ele já tava. sempre esteve\na forma dele não fecha. eu olho e ela não",
+      "rawNarration": true,
+      "silentTurns": 3,
       "options": []
     }
   ]

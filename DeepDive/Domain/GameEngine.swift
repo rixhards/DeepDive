@@ -20,6 +20,7 @@ struct EngineState: Equatable {
 
 final class GameEngine {
     private let nodesByID: [String: StoryNode]
+    private let sanityZeroNodeID: String?
     private var flags: [String: Bool] = [:]
     private var ints: [String: Int] = [:]
     private(set) var currentNodeID: String
@@ -29,6 +30,10 @@ final class GameEngine {
         guard nodesByID[story.startNodeID] != nil else {
             throw GameEngineError.unknownNode(story.startNodeID)
         }
+        if let sanityZeroNodeID = story.sanityZeroNodeID, nodesByID[sanityZeroNodeID] == nil {
+            throw GameEngineError.unknownNode(sanityZeroNodeID)
+        }
+        self.sanityZeroNodeID = story.sanityZeroNodeID
         currentNodeID = story.startNodeID
         ints = story.initialState ?? [:]
     }
@@ -68,6 +73,12 @@ final class GameEngine {
         }
         apply(option.effects)
         currentNodeID = option.nextNodeID
+
+        // Losing your mind overrides wherever you were headed.
+        if ints["sanity"] == 0, let sanityZeroNodeID {
+            currentNodeID = sanityZeroNodeID
+        }
+
         return response(for: currentNodeID)
     }
 
@@ -77,8 +88,10 @@ final class GameEngine {
         return EngineResponse(
             nodeID: nodeID,
             characterText: node?.characterText ?? "",
-            options: availableOptions.map { EngineOption(id: $0.id, text: $0.text) },
-            isTerminal: availableOptions.isEmpty
+            options: availableOptions.map { EngineOption(id: $0.id, text: $0.text, hints: $0.hints) },
+            isTerminal: availableOptions.isEmpty,
+            rawNarration: node?.rawNarration ?? false,
+            silentTurns: node?.silentTurns ?? 0
         )
     }
 

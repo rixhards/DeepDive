@@ -83,7 +83,14 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
   xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' build
   xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' test
   ```
-- Run the app or take screenshots via the `/run` skill when you need to see a change working.
+- **Who tests what:** Richard tests on a **physical iPhone 16 (iOS 26.5)** — that's the only
+  place Apple Intelligence actually runs, so intent parsing and dynamic narration can only be
+  judged there. Agents **validate that it builds** and stop; do not launch the Simulator app or
+  ask him to check the Simulator. A Simulator *destination* is fine as a pure compile target.
+- **Tests are not a deliverable here.** Write a test only when it's the only way *you* can
+  verify something (e.g. engine logic unreachable in the shipped story). No broad suites —
+  nobody reviews them. Keep model changes additive (optional fields with defaults) so existing
+  tests keep compiling.
 
 ## Who does what
 
@@ -105,7 +112,14 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
 ## Current status (2026-07)
 
-Specs 001–007 are implemented: chat UI, game engine, state variables, persistence, and the
-full on-device AI layer (free-text intent parsing + dynamic narration). Deployment target is
-**iOS 26+** (Foundation Models / Apple Intelligence required). Next up: 008+ Menu +
-Achievements.
+Specs 001–008 are implemented: chat UI, game engine, state variables, persistence, the full
+on-device AI layer (free-text intent parsing + dynamic narration), and the sanity rework.
+Deployment target is **iOS 26+** (Foundation Models / Apple Intelligence required).
+
+Spec 008 removed `trust` (sanity is now the only state variable) and cut the endings from five
+to three: escape-transformed, surrender (sanity 0), and taken. A debug sanity meter is **on**
+(`DebugFlags.showSanityMeter`) for balancing — turn it off before shipping; the game is meant
+to have no HUD.
+
+Next up: **009 Game Loop & Redundancy** (inspect actions, revisit text, exploration loops),
+then 010+ Menu + Achievements.

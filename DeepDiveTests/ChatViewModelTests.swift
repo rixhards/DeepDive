@@ -85,6 +85,22 @@ final class ChatViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isFinished)
     }
 
+    func testConsecutiveClarificationsNeverRepeatTheSameLine() async throws {
+        let viewModel = try makeViewModel(intentParser: StubIntentParser.alwaysClarifies)
+        viewModel.start()
+        try await Task.sleep(for: Self.typingWait)
+
+        viewModel.send("sei lá, tanto faz")
+        try await Task.sleep(for: Self.typingWait)
+        let firstClarification = viewModel.messages.last?.text
+
+        viewModel.send("ainda não sei")
+        try await Task.sleep(for: Self.typingWait)
+        let secondClarification = viewModel.messages.last?.text
+
+        XCTAssertNotEqual(firstClarification, secondClarification)
+    }
+
     func testEmptyOrWhitespaceInputIsIgnored() async throws {
         let viewModel = try makeViewModel()
         viewModel.start()
@@ -151,7 +167,7 @@ final class ChatViewModelTests: XCTestCase {
     // MARK: - Narration (spec 007)
 
     func testCharacterMessageUsesNarratorOutputNotRawBrief() async throws {
-        let narrator = StubNarrator { brief, _, _, _ in "[narrado] \(brief)" }
+        let narrator = StubNarrator { brief, _, _ in "[narrado] \(brief)" }
         let engine = try GameEngine(story: makeFixtureStory())
         let viewModel = ChatViewModel(
             engineProvider: { engine },
@@ -166,18 +182,16 @@ final class ChatViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.messages.first?.text, "[narrado] oi, tem alguém aí?")
     }
 
-    func testNarratorReceivesCurrentSanityAndTrust() async throws {
+    func testNarratorReceivesCurrentSanity() async throws {
         let story = Story(
             startNodeID: "start",
-            initialState: ["sanity": 42, "trust": 77],
+            initialState: ["sanity": 42],
             nodes: [StoryNode(id: "start", characterText: "oi", options: [])]
         )
         let engine = try GameEngine(story: story)
         var capturedSanity: Int?
-        var capturedTrust: Int?
-        let narrator = StubNarrator { brief, sanity, trust, _ in
+        let narrator = StubNarrator { brief, sanity, _ in
             capturedSanity = sanity
-            capturedTrust = trust
             return brief
         }
         let viewModel = ChatViewModel(
@@ -191,7 +205,6 @@ final class ChatViewModelTests: XCTestCase {
         try await Task.sleep(for: Self.typingWait)
 
         XCTAssertEqual(capturedSanity, 42)
-        XCTAssertEqual(capturedTrust, 77)
     }
 
     // MARK: - Persistence round-trip (spec 005)

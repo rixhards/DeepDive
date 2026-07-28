@@ -257,4 +257,60 @@ final class StateVariableTests: XCTestCase {
         let distrustingResponse = try distrustingEngine.advance(choosing: "opt_distrust")
         XCTAssertTrue(distrustingResponse.options.contains { $0.id == "opt_low_sanity" })
     }
+
+    // MARK: - Sanity-zero routing (spec 008)
+    //
+    // The bundled story can't currently reach sanity 0 (its lowest reachable value is 55),
+    // so this route is unverifiable by playing the real game — hence a fixture.
+
+    private func sanityZeroStory(startingSanity: Int) -> Story {
+        Story(
+            startNodeID: "start",
+            initialState: ["sanity": startingSanity],
+            sanityZeroNodeID: "node_surrender",
+            nodes: [
+                StoryNode(id: "start", characterText: "oi", options: [
+                    StoryOption(
+                        id: "opt_harm",
+                        text: "machuca",
+                        nextNodeID: "node_normal",
+                        effects: [StoryEffect(variable: "sanity", mode: .delta(-10))]
+                    ),
+                ]),
+                StoryNode(id: "node_normal", characterText: "segue o jogo"),
+                StoryNode(id: "node_surrender", characterText: "◇◇◇", rawNarration: true),
+            ]
+        )
+    }
+
+    func testSanityHittingZeroOverridesTheChosenDestination() throws {
+        let engine = try GameEngine(story: sanityZeroStory(startingSanity: 10))
+        _ = engine.start()
+
+        let response = try engine.advance(choosing: "opt_harm")
+
+        XCTAssertEqual(response.nodeID, "node_surrender", "sanity 0 must win over the option's nextNodeID")
+        XCTAssertTrue(response.isTerminal)
+        XCTAssertTrue(response.rawNarration, "the degraded ending must bypass the narrator")
+    }
+
+    func testSanityAboveZeroFollowsTheNormalDestination() throws {
+        let engine = try GameEngine(story: sanityZeroStory(startingSanity: 50))
+        _ = engine.start()
+
+        let response = try engine.advance(choosing: "opt_harm")
+
+        XCTAssertEqual(response.nodeID, "node_normal")
+    }
+
+    func testUnknownSanityZeroNodeIsRejectedAtInit() {
+        let story = Story(
+            startNodeID: "start",
+            sanityZeroNodeID: "node_missing",
+            nodes: [StoryNode(id: "start", characterText: "oi")]
+        )
+        XCTAssertThrowsError(try GameEngine(story: story)) { error in
+            XCTAssertEqual(error as? GameEngineError, .unknownNode("node_missing"))
+        }
+    }
 }

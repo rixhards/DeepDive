@@ -81,10 +81,17 @@ fully unit-testable.
 - Terminal nodes are endings.
 - The engine is deterministic: same node + same option → same next node.
 
-**State variables:** integer variables (`sanity`, `trust`, ...) and boolean flags, seeded
-from `story.json`'s `initialState` and mutated by option `effects` (`delta`/`set`, clamped
+**State variables:** integer variables (`sanity`) and boolean flags, seeded from
+`story.json`'s `initialState` and mutated by option `effects` (`delta`/`set`, clamped
 0–100 for integers). `conditions` (`eq`/`gte`/`lte`) filter which options an
-`EngineResponse` exposes.
+`EngineResponse` exposes. (`trust` existed until spec 008 removed it.)
+
+**Sanity-zero routing:** when an effect brings `sanity` to 0, the engine overrides the chosen
+option's destination and jumps to the root-level `sanityZeroNodeID` — the surrender ending.
+
+**Ending delivery flags:** a node may set `rawNarration` (deliver `characterText` verbatim,
+skipping the `Narrator` — for endings whose text is deliberately malformed) and `silentTurns`
+(keep the composer alive for N unanswered player messages before the game ends).
 
 ### Data
 
@@ -137,7 +144,7 @@ sequenceDiagram
         VM->>E: advance(choosing: optionID)
         E-->>VM: EngineResponse (next node, filtered options)
         VM->>S: save(session) — full state + messages
-        VM->>N: narrate(brief, sanity, trust, history)
+        VM->>N: narrate(brief, sanity, history)
         N-->>VM: in-character pt-BR reply
         VM->>V: show typing indicator (delay scaled to reply length)
         VM->>V: append narrated character message + unlock new input

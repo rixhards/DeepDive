@@ -15,4 +15,27 @@ final class FoundationModelsIntentParserTests: XCTestCase {
         let result = await parser.parse(playerText: "qualquer coisa", options: [])
         XCTAssertEqual(result, .clarify)
     }
+
+    func testSingleOptionAlwaysMatchesRegardlessOfInput() async {
+        let parser = FoundationModelsIntentParser()
+        let options = [EngineOption(id: "opt_only", text: "então anda, rápido")]
+
+        let result = await parser.parse(playerText: "isso não tem nada a ver com nada", options: options)
+
+        XCTAssertEqual(result, .match(optionID: "opt_only"))
+    }
+
+    func testHeuristicMatchResolvesWithoutNeedingTheModel() async {
+        let parser = FoundationModelsIntentParser()
+        let options = [
+            EngineOption(id: "opt_who", text: "quem é você?", hints: ["quem fala"]),
+            EngineOption(id: "opt_where", text: "onde você está?", hints: ["cadê você"]),
+        ]
+
+        // Resolved by HeuristicIntentMatcher before the model-availability check is ever
+        // reached — deterministic, and doesn't depend on Foundation Models being present.
+        let result = await parser.parse(playerText: "cadê você", options: options)
+
+        XCTAssertEqual(result, .match(optionID: "opt_where"))
+    }
 }

@@ -1,7 +1,12 @@
 # Spec 007 — Dynamic Narration
 
 ## Status
-`implemented`
+`implemented` — partially superseded by [Spec 008](008-sanity-rework.md)
+
+> **Superseded parts.** The `trust` parameter was dropped from the `Narrator` protocol in spec
+> 008; the signature is now `narrate(brief:sanity:history:)` and tone is shaped by sanity alone.
+> Spec 008 also added a `rawNarration` opt-out: nodes flagged with it bypass this narrator
+> entirely, so deliberately malformed ending text isn't rewritten into clean prose.
 
 ## Context
 
@@ -121,3 +126,4 @@ Blocks: **Spec 008+** (Menu / Achievements — the fully AI-narrated game should
 |------|--------|--------|
 | 2026-07-23 | Antigravity | Initial creation from /grill-me session |
 | 2026-07-23 | Claude Code | Implemented alongside Spec 006 (approved together by Richard). Added `Narrator`/`StaticNarrator`/`FoundationModelsNarrator`; `ChatViewModel.deliver(_:delayOverride:)` narrates before computing the typing delay, unifying Spec 006's and 007's delay formulas into one (`max(1.5, min(5.0, narratedText.count / 40))`). Added `NarratorTests` + a `StubNarrator`-based `ChatViewModelTests` case proving the pipeline uses the narrator's output, not the raw brief. |
+| 2026-07-23 | Claude Code | Real-device testing surfaced a serious leak: the model would echo the transcript's own "personagem:"/"jogador:" speaker labels into its output, and occasionally wrap dialogue in `*asterisk roleplay*` notation that renders as literal characters (no markdown support in `Text`). Tightened the prompt (explicit anti-label/anti-asterisk rules, tighter "don't invent" guidance with a negative example, brevity preferred over the previous "always up to 3 messages"), and — since this must never reach the screen — made `clean(_:)` defensively strip speaker labels line-by-line and asterisks unconditionally, regardless of whether the model follows instructions. Extended `NarratorTests` accordingly. |

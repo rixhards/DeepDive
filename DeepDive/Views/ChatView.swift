@@ -26,6 +26,10 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 header
 
+                if DebugFlags.showSanityMeter {
+                    SanityMeterView(sanity: viewModel.currentSanity)
+                }
+
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: Theme.messageSpacing) {

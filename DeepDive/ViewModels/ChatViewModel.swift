@@ -27,6 +27,16 @@ final class ChatViewModel {
     private var currentEngineOptions: [EngineOption] = []
     private var deliveryTask: Task<Void, Never>?
     private var hasStarted = false
+    private var lastClarification: String?
+    /// Player messages the current node still swallows in silence before the game ends.
+    /// Transient by design — a restore starts the count over.
+    private var silentTurnsRemaining = 0
+
+    /// Current sanity, for the debug meter only. Defaults to the story's own starting value
+    /// so the meter reads sensibly before the engine has loaded.
+    var currentSanity: Int {
+        engine?.state.ints["sanity"] ?? 80
+    }
 
     init(
         engineProvider: @escaping () throws -> GameEngine = { try GameEngine(bundle: .main) },
@@ -84,6 +94,18 @@ final class ChatViewModel {
         guard !trimmed.isEmpty else { return }
         let playerText = String(trimmed.prefix(500))
 
+        // She's gone. The message lands in the chat and nothing answers it — no typing
+        // indicator, no engine, no parser. The silence is the ending.
+        if silentTurnsRemaining > 0 {
+            messages.append(ChatMessage(text: playerText, sender: .player, timestamp: Date()))
+            silentTurnsRemaining -= 1
+            if silentTurnsRemaining == 0 {
+                isFinished = true
+                try? sessionRepository?.delete()
+            }
+            return
+        }
+
         isTyping = true
         messages.append(ChatMessage(text: playerText, sender: .player, timestamp: Date()))
 
@@ -104,7 +126,9 @@ final class ChatViewModel {
                 }
             case .clarify:
                 saveSession(engine: engine)
-                await deliverClarification(ClarificationMessages.random())
+                let clarification = ClarificationMessages.random(excluding: lastClarification)
+                lastClarification = clarification
+                await deliverClarification(clarification)
             }
         }
     }
@@ -123,13 +147,16 @@ final class ChatViewModel {
     /// Narrates the response's raw brief, waits a typing delay scaled to the narrated
     /// text's length (or `delayOverride` if given), then appends it as a character message.
     private func deliver(_ response: EngineResponse, delayOverride: Double? = nil) async {
-        let engineState = engine?.state
-        let narratedText = await narrator.narrate(
-            brief: response.characterText,
-            sanity: engineState?.ints["sanity"] ?? 80,
-            trust: engineState?.ints["trust"] ?? 50,
-            history: messages
-        )
+        let narratedText: String
+        if response.rawNarration {
+            narratedText = response.characterText
+        } else {
+            narratedText = await narrator.narrate(
+                brief: response.characterText,
+                sanity: currentSanity,
+                history: messages
+            )
+        }
 
         let delay = delayOverride ?? typingDelay(for: narratedText)
         try? await Task.sleep(for: .seconds(delay))
@@ -140,8 +167,14 @@ final class ChatViewModel {
         currentEngineOptions = response.options
 
         if response.isTerminal {
-            isFinished = true
-            try? sessionRepository?.delete()
+            // A node with silent turns keeps the composer alive: the player gets to shout
+            // into the void a few times before the game admits it's over.
+            if response.silentTurns > 0 {
+                silentTurnsRemaining = response.silentTurns
+            } else {
+                isFinished = true
+                try? sessionRepository?.delete()
+            }
         }
     }
 

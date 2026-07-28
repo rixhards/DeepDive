@@ -22,8 +22,22 @@ final class StoryDecodingTests: XCTestCase {
         }
         """.data(using: .utf8)!
         let option = try JSONDecoder().decode(StoryOption.self, from: json)
+        XCTAssertEqual(option.hints, [])
         XCTAssertEqual(option.conditions, [])
         XCTAssertEqual(option.effects, [])
+    }
+
+    func testHintsDecodeWhenPresent() throws {
+        let json = """
+        {
+            "id": "opt_1",
+            "text": "onde você está?",
+            "nextNodeID": "node_2",
+            "hints": ["cadê você", "onde vc tá"]
+        }
+        """.data(using: .utf8)!
+        let option = try JSONDecoder().decode(StoryOption.self, from: json)
+        XCTAssertEqual(option.hints, ["cadê você", "onde vc tá"])
     }
 
     func testMissingOptionsDefaultsToEmptyArray() throws {
@@ -42,7 +56,9 @@ final class StoryDecodingTests: XCTestCase {
         let nodesByID = Dictionary(uniqueKeysWithValues: story.nodes.map { ($0.id, $0) })
 
         var reachable: Set<String> = []
-        var queue = [story.startNodeID]
+        // The sanity-zero ending is never an option's destination — the engine jumps to it
+        // directly — so it's a traversal root of its own, not an orphan.
+        var queue = [story.startNodeID] + (story.sanityZeroNodeID.map { [$0] } ?? [])
         while let nodeID = queue.popLast() {
             guard !reachable.contains(nodeID) else { continue }
             reachable.insert(nodeID)
