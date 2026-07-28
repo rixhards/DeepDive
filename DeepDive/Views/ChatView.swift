@@ -10,15 +10,9 @@ struct ChatView: View {
     @State private var inputText = ""
 
     var body: some View {
-        Group {
-            if case .failed(let error) = viewModel.state {
-                ErrorView(error: error)
-            } else {
-                chatBody
-            }
-        }
-        .background(Theme.background.ignoresSafeArea())
-        .onAppear { viewModel.start() }
+        chatBody
+            .background(Theme.background.ignoresSafeArea())
+            .onAppear { viewModel.start() }
     }
 
     private var chatBody: some View {
@@ -57,7 +51,12 @@ struct ChatView: View {
                     }
                 }
 
-                if case .ready = viewModel.state, !viewModel.isTyping, !viewModel.isFinished {
+                if viewModel.isFinished {
+                    EndingRevealView(ending: viewModel.reachedEnding) {
+                        inputText = ""
+                        viewModel.restart()
+                    }
+                } else if !viewModel.isTyping {
                     ComposerView(text: $inputText, isDisabled: false) {
                         viewModel.send(inputText)
                         inputText = ""

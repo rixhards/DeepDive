@@ -1,7 +1,9 @@
 # Spec 002 — Game Engine
 
 ## Status
-`implemented`
+`implemented` — **superseded by [ADR-002](../adr/ADR-002-world-simulation-in-swift.md)**
+
+> The JSON dialog tree this spec describes was replaced by a Swift world simulation on 2026-07-28. The spec's *intent* still holds; its implementation details no longer match the code. Kept as a record of how the project got here.
 
 ## Context
 The Chat UI is currently driven by a hardcoded mock inside the view layer. DeepDive needs a deterministic, data-driven core to manage the narrative. The Game Engine acts as this core, parsing a narrative graph (dialog tree) from a JSON file and maintaining the state of the conversation. This spec builds the standalone Game Engine and the foundational JSON structure, completely decoupled from the UI. 

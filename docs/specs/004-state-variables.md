@@ -1,7 +1,7 @@
 # Spec 004 — State Variables
 
 ## Status
-`implemented` — partially superseded by [Spec 008](008-sanity-rework.md)
+`implemented` — superseded by [Spec 008](008-sanity-rework.md) and [ADR-002](../adr/ADR-002-world-simulation-in-swift.md)
 
 > **Superseded parts.** `trust` was removed in spec 008 and no longer exists anywhere in the
 > app; every mention of it below is historical. The `sanity` mechanics, `initialState`, the

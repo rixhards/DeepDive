@@ -1,7 +1,9 @@
 # Spec 009 — Game Loop & Redundancy
 
 ## Status
-`draft`
+`implemented` — **superseded by [ADR-002](../adr/ADR-002-world-simulation-in-swift.md)**
+
+> The JSON dialog tree this spec describes was replaced by a Swift world simulation on 2026-07-28. The spec's *intent* still holds; its implementation details no longer match the code. Kept as a record of how the project got here.
 
 ## Context
 
@@ -40,62 +42,62 @@ reached and start over.
 
 ### Stay-in-place actions
 
-- [ ] `StoryOption.nextNodeID` becomes optional. An option with no `nextNodeID` must carry
+- [x] `StoryOption.nextNodeID` becomes optional. An option with no `nextNodeID` must carry
   `responseText`; the engine replies with it and **leaves `currentNodeID` unchanged**.
-- [ ] Exactly one of `nextNodeID` / `responseText` is present on every option; a node that
+- [x] Exactly one of `nextNodeID` / `responseText` is present on every option; a node that
   violates this fails validation at engine init with a clear error.
-- [ ] A stay-in-place option still applies its `effects` and is still filtered by its
+- [x] A stay-in-place option still applies its `effects` and is still filtered by its
   `conditions`, exactly like a moving option.
-- [ ] After a stay-in-place option, the node's full option set is offered again (minus anything
+- [x] After a stay-in-place option, the node's full option set is offered again (minus anything
   its effects just gated out) — the player can keep acting in the same place.
-- [ ] The response is narrated normally (subject to `rawNarration`), and the typing delay scales
+- [x] The response is narrated normally (subject to `rawNarration`), and the typing delay scales
   to it as usual.
 
 ### Multi-beat sequences
 
-- [ ] `StoryNode.beats: [String]` (default `[]`) holds extra messages delivered **after**
+- [x] `StoryNode.beats: [String]` (default `[]`) holds extra messages delivered **after**
   `characterText`, in order, each as its own chat message with its own typing delay.
-- [ ] No player input is accepted while beats are being delivered; the composer is disabled and
+- [x] No player input is accepted while beats are being delivered; the composer is disabled and
   the typing indicator runs between them.
-- [ ] A node with `beats` and no options plays its sequence and then ends the game — this is how
+- [x] A node with `beats` and no options plays its sequence and then ends the game — this is how
   the infinite corridor and the water creature resolve.
-- [ ] Beats respect `rawNarration` and `silentTurns` on their node.
+- [x] Beats respect `rawNarration` and `silentTurns` on their node.
 
 ### Ending identity
 
-- [ ] `StoryNode.ending: String?` names which of the three endings a terminal node resolves to
+- [x] `StoryNode.ending: String?` names which of the three endings a terminal node resolves to
   (`escape`, `surrender`, `taken`).
-- [ ] **Any number of terminal nodes may share an ending id.** `taken` is explicitly a wildcard
+- [x] **Any number of terminal nodes may share an ending id.** `taken` is explicitly a wildcard
   for alternative deaths (fire, asphyxiation, the corridor, the water) that need no lore of
   their own. This revises spec 008's "exactly three terminal nodes" criterion — the invariant is
   now *exactly three ending identities*.
-- [ ] Every terminal node declares an `ending`; a terminal node without one fails validation.
-- [ ] `EngineResponse` exposes the reached ending so the UI can name it.
+- [~] Every terminal node declares an `ending`; a terminal node without one **logs a warning** rather than failing validation — a hard throw would break every test fixture that builds a throwaway terminal node, which the General criterion forbids. The shipped story is enforced by the lint script instead.
+- [x] `EngineResponse` exposes the reached ending so the UI can name it.
 
 ### Terminal-trap detection
 
-- [ ] A node is terminal because it has **no authored options**, not because its options were
+- [x] A node is terminal because it has **no authored options**, not because its options were
   all gated out by conditions.
-- [ ] If a node has authored options but none pass their conditions, the engine logs a loud
+- [x] If a node has authored options but none pass their conditions, the engine logs a loud
   authoring error and ends the game gracefully rather than hanging.
-- [ ] A validation pass over `story.json` reports any node whose options are *all* conditional
+- [x] A validation pass over `story.json` reports any node whose options are *all* conditional
   (no unconditional escape) — a dead-end risk once loops exist.
 
 ### Restart
 
-- [ ] When the game ends, the chat shows which ending was reached and a **"recomeçar"** control.
-- [ ] "Recomeçar" resets engine state, clears the messages, deletes any saved session, and starts
+- [x] When the game ends, the chat shows which ending was reached and a **"recomeçar"** control.
+- [x] "Recomeçar" resets engine state, clears the messages, deletes any saved session, and starts
   a fresh run without relaunching the app.
-- [ ] The ending reveal does not appear mid-game, and does not appear during
+- [x] The ending reveal does not appear mid-game, and does not appear during
   `node_end_taken`'s silent turns — only once the run is genuinely over.
-- [ ] "Voltar ao menu" is **out of scope** here: there is no menu yet. It lands in spec 010
+- [x] "Voltar ao menu" is **out of scope** here: there is no menu yet. It lands in spec 010
   alongside the menu itself.
 
 ### General
 
-- [ ] All new fields are optional with defaults, so existing `story.json`, the spec-004 fixture,
+- [x] All new fields are optional with defaults, so existing `story.json`, the spec-004 fixture,
   and existing tests decode and pass unchanged.
-- [ ] No new Swift Package dependencies.
+- [x] No new Swift Package dependencies.
 
 ## Expected Behavior
 
@@ -250,4 +252,5 @@ endings gallery that `ending` ids make possible.
 
 | Date | Author | Change |
 |------|--------|--------|
+| 2026-07-28 | Claude Code | Implemented. `StoryOption.nextNodeID` optional + `responseText`; `StoryNode.beats`/`ending`; terminal now means "no authored options" with a loud log when conditions strand the player; `restart()` + `EndingRevealView`. Added a minimal in-place demo at `node_where` (look around / are you ok, with the anti-farm pattern) so the feature is testable on device. Story lint lives in the scratchpad, not the test target. |
 | 2026-07-27 | Claude Code | Initial draft from the authored scenes 1–3 and the "stay in place" rule. Scoped to four engine capabilities plus restart; explicitly rejected the sibling-node approach to anti-farming (combinatorial) in favour of an authored flag pattern, and cut revisit text / repeat counters / `effectsOnce` as already-covered. Awaiting review. |

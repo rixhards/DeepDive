@@ -38,8 +38,12 @@ do not silently guess scope.
 - **No new dependencies.** The app uses only Apple frameworks. Adding any dependency
   requires an ADR in `docs/adr/`.
 - **Stay in scope.** Do not build things listed under "Out of Scope" in `docs/vision.md`.
-- **Narrative content is data, not code.** Story text lives in JSON (decoded with
-  `Codable`), never hardcoded in Swift.
+- **Narrative content is declarative data, kept out of the engine.** All prose lives in
+  `WorldMap.swift` as plain declarations — places, features, items, endings — with no control
+  flow. The engine (`ActionResolver`) interprets it; views never contain prose.
+  *Amended by [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md): this used to require
+  JSON. The dialog tree capped her at 37 authored lines and could not answer "where are you" or
+  "what do you have", so the story became a Swift world model.*
 - **No real people as characters.** Do not depict real individuals tied to Amazonian
   legends (researchers, real Indigenous people, missing explorers).
 
@@ -51,10 +55,10 @@ do not silently guess scope.
 | UI | SwiftUI |
 | Architecture | MVVM with `@Observable` |
 | Dependencies | Swift Package Manager (currently none) |
-| Game engine | Local finite state machine (FSM) in pure Swift — deterministic, offline |
-| Narrative format | JSON + `Codable` (data-driven) |
+| Game engine | `ActionResolver` — deterministic world simulation in pure Swift, offline |
+| Narrative format | Swift world model (`WorldMap.swift`): places, features, items, endings |
 | Persistence | SwiftData, single auto-saved session slot |
-| Runtime AI | Foundation Models — `IntentParser` (free text → option) + `Narrator` (brief → in-character prose) |
+| Runtime AI | Foundation Models — `ActionParser` (free text → verb + target) + `Narrator` (facts → in-character prose). `LocalActionParser` handles common phrasings with no AI, so the game runs in the Simulator too |
 
 Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
@@ -110,16 +114,27 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 - `.claude/skills/` — reusable procedures Claude Code can auto-load (e.g. `generate-spec`)
 - `.claude/agents/` — subagents (e.g. `spec-reviewer`)
 
-## Current status (2026-07)
+## Current status (2026-07-28)
 
-Specs 001–008 are implemented: chat UI, game engine, state variables, persistence, the full
-on-device AI layer (free-text intent parsing + dynamic narration), and the sanity rework.
-Deployment target is **iOS 26+** (Foundation Models / Apple Intelligence required).
+**The JSON dialog tree is gone.** [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md)
+replaced it with a Swift world simulation, because the tree capped the character at 37 authored
+lines and structurally could not answer "onde você está?" or "o que você tem aí?".
 
-Spec 008 removed `trust` (sanity is now the only state variable) and cut the endings from five
-to three: escape-transformed, surrender (sanity 0), and taken. A debug sanity meter is **on**
-(`DebugFlags.showSanityMeter`) for balancing — turn it off before shipping; the game is meant
+The loop is now: player text → `ActionParser` extracts a **verb + target** → `ActionResolver`
+decides the outcome against `World` → `Narrator` says it in her voice. Places list their
+**features**, so everything listed is examinable without authoring an option for it.
+
+- `World.swift` — the authoritative state (place, inventory, flags, sanity, ending)
+- `WorldMap.swift` — **all narrative prose**; add a place by listing what's in it
+- `ActionResolver.swift` — the interaction rules (knife vs hands vs lamp on the hay, etc.)
+- `LocalActionParser.swift` — deterministic pt-BR verb matching, no AI needed
+
+Three endings (008, unchanged in behaviour): escape, surrender (sanity 0), taken. Debug sanity
+meter is **on** (`DebugFlags.showSanityMeter`) — turn it off before shipping; the game is meant
 to have no HUD.
 
-Next up: **009 Game Loop & Redundancy** (inspect actions, revisit text, exploration loops),
-then 010+ Menu + Achievements.
+Specs 002/003/004/006/009 are superseded by ADR-002 and kept only as history. Specs 001, 005,
+007 and 008 still describe live behaviour.
+
+**Known gaps:** `pastIronDoor` is a placeholder ending, the world is only three real places, and
+sanity 0 is hard to reach — all of them need more authored content, not more engine.

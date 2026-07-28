@@ -1,7 +1,9 @@
 # Spec 003 — UI + Engine Integration
 
 ## Status
-`implemented`
+`implemented` — **superseded by [ADR-002](../adr/ADR-002-world-simulation-in-swift.md)**
+
+> The JSON dialog tree this spec describes was replaced by a Swift world simulation on 2026-07-28. The spec's *intent* still holds; its implementation details no longer match the code. Kept as a record of how the project got here.
 
 ## Context
 

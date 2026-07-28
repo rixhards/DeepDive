@@ -5,14 +5,24 @@
 
 import Foundation
 
-protocol Narrator {
-    func narrate(brief: String, sanity: Int, history: [ChatMessage]) async -> String
+/// Everything the narrator is allowed to know. `facts` are authoritative — it may rephrase
+/// them, never contradict or extend them.
+struct NarrationRequest {
+    let facts: [String]
+    let sanity: Int
+    let placeSummary: String
+    let carrying: [String]
+    let history: [ChatMessage]
 }
 
-/// Returns the brief unchanged. Used as the default in tests and as a safe compile-time
-/// fallback — the JSON node text is always a valid (if generic) message on its own.
+protocol Narrator {
+    func narrate(_ request: NarrationRequest) async -> String
+}
+
+/// Returns the facts unchanged. Safe compile-time fallback and the default in tests — the
+/// authored facts are already valid pt-BR on their own.
 struct StaticNarrator: Narrator {
-    func narrate(brief: String, sanity: Int, history: [ChatMessage]) async -> String {
-        brief
+    func narrate(_ request: NarrationRequest) async -> String {
+        request.facts.joined(separator: " ")
     }
 }

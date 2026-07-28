@@ -8,94 +8,92 @@ import Observation
 
 @Observable
 final class ChatViewModel {
-    enum ChatState {
-        case loading
-        case ready
-        case failed(Error)
-    }
-
-    private(set) var state: ChatState = .loading
     private(set) var messages: [ChatMessage] = []
     private(set) var isTyping = false
     private(set) var isFinished = false
+    private(set) var reachedEnding: Ending?
 
-    private let engineProvider: () throws -> GameEngine
     private let sessionRepository: SessionRepository?
-    private let intentParser: IntentParser
+    private let parser: ActionParser
     private let narrator: Narrator
-    private var engine: GameEngine?
-    private var currentEngineOptions: [EngineOption] = []
+    private let resolver = ActionResolver()
+
+    private var world = World()
     private var deliveryTask: Task<Void, Never>?
     private var hasStarted = false
-    private var lastClarification: String?
-    /// Player messages the current node still swallows in silence before the game ends.
-    /// Transient by design — a restore starts the count over.
+    /// Player messages the ending still swallows in silence before the game closes.
     private var silentTurnsRemaining = 0
 
-    /// Current sanity, for the debug meter only. Defaults to the story's own starting value
-    /// so the meter reads sensibly before the engine has loaded.
-    var currentSanity: Int {
-        engine?.state.ints["sanity"] ?? 80
-    }
+    /// Current sanity, for the debug meter only.
+    var currentSanity: Int { world.sanity }
 
     init(
-        engineProvider: @escaping () throws -> GameEngine = { try GameEngine(bundle: .main) },
         sessionRepository: SessionRepository? = try? SessionRepository(),
-        intentParser: IntentParser = FoundationModelsIntentParser(),
+        parser: ActionParser = FoundationModelsActionParser(),
         narrator: Narrator = FoundationModelsNarrator()
     ) {
-        self.engineProvider = engineProvider
         self.sessionRepository = sessionRepository
-        self.intentParser = intentParser
+        self.parser = parser
         self.narrator = narrator
     }
 
-    /// Loads the engine (restoring a saved session if one exists) and kicks off the
-    /// conversation. Safe to call from `onAppear`; only runs once.
+    /// Loads any saved run and opens the conversation. Safe to call from `onAppear`.
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
 
-        do {
-            let engine = try engineProvider()
-            self.engine = engine
-
-            if let session = sessionRepository?.load() {
-                try engine.restore(EngineState(currentNodeID: session.currentNodeID, flags: session.flags, ints: session.ints))
-                messages = session.messages
-                state = .ready
-                isTyping = true
-                // The save always happens right after `advance()`, before the character's
-                // reply for the new node is generated — so a restored session always has a
-                // pending reply to catch up on. A short fixed delay reads as "catching up"
-                // rather than the normal narration-scaled thinking pause.
-                deliveryTask = Task { [weak self] in
-                    guard let self else { return }
-                    await deliver(engine.start(), delayOverride: 0.5)
-                }
-            } else {
-                state = .ready
-                isTyping = true
-                deliveryTask = Task { [weak self] in
-                    guard let self else { return }
-                    await deliver(engine.start())
-                }
+        if let saved = sessionRepository?.load(), !saved.world.isOver {
+            world = saved.world
+            messages = saved.messages
+            // A restored run is already mid-conversation; she just picks up where she was.
+            isTyping = true
+            deliveryTask = Task { [weak self] in
+                guard let self else { return }
+                var resumed = world
+                let outcome = resolver.arrival(at: world.place, world: &resumed)
+                world = resumed
+                await deliver(outcome, delayOverride: 0.5)
             }
-        } catch {
-            state = .failed(error)
+            return
+        }
+
+        world = World()
+        isTyping = true
+        deliveryTask = Task { [weak self] in
+            guard let self else { return }
+            var fresh = world
+            fresh.visited.removeAll()
+            let outcome = resolver.arrival(at: fresh.place, world: &fresh)
+            world = fresh
+            await deliver(outcome)
         }
     }
 
-    /// Sends the player's free-text message: an `IntentParser` maps it to one of the
-    /// engine's currently valid options (or asks the character to clarify).
+    /// Wipes the finished run and starts a fresh one, without relaunching the app.
+    func restart() {
+        deliveryTask?.cancel()
+        deliveryTask = nil
+        world = World()
+        messages = []
+        silentTurnsRemaining = 0
+        reachedEnding = nil
+        isFinished = false
+        isTyping = false
+        try? sessionRepository?.delete()
+        hasStarted = false
+        start()
+    }
+
+    /// Sends the player's message: the parser extracts an attempted action, the resolver
+    /// decides what actually happens, and the narrator says it in her voice.
     func send(_ text: String) {
-        guard !isTyping, !isFinished, let engine else { return }
+        guard !isTyping else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let playerText = String(trimmed.prefix(500))
 
         // She's gone. The message lands in the chat and nothing answers it — no typing
-        // indicator, no engine, no parser. The silence is the ending.
+        // indicator, no parser, no resolver. The silence is the ending.
         if silentTurnsRemaining > 0 {
             messages.append(ChatMessage(text: playerText, sender: .player, timestamp: Date()))
             silentTurnsRemaining -= 1
@@ -106,85 +104,71 @@ final class ChatViewModel {
             return
         }
 
+        guard !isFinished else { return }
+
         isTyping = true
         messages.append(ChatMessage(text: playerText, sender: .player, timestamp: Date()))
 
         deliveryTask = Task { [weak self] in
             guard let self else { return }
-            let result = await intentParser.parse(playerText: playerText, options: currentEngineOptions)
-
-            switch result {
-            case .match(let optionID):
-                do {
-                    let response = try engine.advance(choosing: optionID)
-                    saveSession(engine: engine)
-                    await deliver(response)
-                } catch {
-                    print("GameEngine error advancing conversation: \(error)")
-                    isTyping = false
-                    isFinished = true
-                }
-            case .clarify:
-                saveSession(engine: engine)
-                let clarification = ClarificationMessages.random(excluding: lastClarification)
-                lastClarification = clarification
-                await deliverClarification(clarification)
-            }
+            let action = await parser.parse(playerText: playerText, world: world)
+            var mutated = world
+            let outcome = resolver.resolve(action, world: &mutated)
+            world = mutated
+            saveSession()
+            await deliver(outcome)
         }
     }
 
-    private func saveSession(engine: GameEngine) {
-        let state = engine.state
-        let session = GameSession(
-            currentNodeID: state.currentNodeID,
-            flags: state.flags,
-            ints: state.ints,
-            messages: messages
-        )
-        try? sessionRepository?.save(session)
+    private func saveSession() {
+        guard !world.isOver else { return }
+        try? sessionRepository?.save(GameSession(world: world, messages: messages))
     }
 
-    /// Narrates the response's raw brief, waits a typing delay scaled to the narrated
-    /// text's length (or `delayOverride` if given), then appends it as a character message.
-    private func deliver(_ response: EngineResponse, delayOverride: Double? = nil) async {
-        let narratedText: String
-        if response.rawNarration {
-            narratedText = response.characterText
-        } else {
-            narratedText = await narrator.narrate(
-                brief: response.characterText,
-                sanity: currentSanity,
-                history: messages
-            )
-        }
+    /// Narrates the outcome, waits a typing delay scaled to the text, then appends it —
+    /// followed by any beats, each as its own message.
+    private func deliver(_ outcome: Outcome, delayOverride: Double? = nil) async {
+        let text = outcome.raw ? outcome.facts.joined(separator: " ") : await narrate(outcome.facts)
 
-        let delay = delayOverride ?? typingDelay(for: narratedText)
+        let delay = delayOverride ?? typingDelay(for: text)
         try? await Task.sleep(for: .seconds(delay))
         guard !Task.isCancelled else { return }
 
         isTyping = false
-        messages.append(ChatMessage(text: narratedText, sender: .character, timestamp: Date()))
-        currentEngineOptions = response.options
+        if !text.isEmpty {
+            messages.append(ChatMessage(text: text, sender: .character, timestamp: Date()))
+        }
 
-        if response.isTerminal {
-            // A node with silent turns keeps the composer alive: the player gets to shout
-            // into the void a few times before the game admits it's over.
-            if response.silentTurns > 0 {
-                silentTurnsRemaining = response.silentTurns
+        // A scene that plays itself out: no way for the player to interrupt.
+        for beat in outcome.beats {
+            isTyping = true
+            let beatText = outcome.raw ? beat : await narrate([beat])
+            try? await Task.sleep(for: .seconds(typingDelay(for: beatText)))
+            guard !Task.isCancelled else { return }
+            isTyping = false
+            messages.append(ChatMessage(text: beatText, sender: .character, timestamp: Date()))
+        }
+
+        if let ending = world.ending {
+            reachedEnding = ending
+            // The taken ending keeps the composer alive so the player can shout into the void.
+            if outcome.silentTurns > 0 {
+                silentTurnsRemaining = outcome.silentTurns
             } else {
                 isFinished = true
-                try? sessionRepository?.delete()
             }
+            try? sessionRepository?.delete()
         }
     }
 
-    private func deliverClarification(_ text: String) async {
-        let delay = typingDelay(for: text)
-        try? await Task.sleep(for: .seconds(delay))
-        guard !Task.isCancelled else { return }
-
-        isTyping = false
-        messages.append(ChatMessage(text: text, sender: .character, timestamp: Date()))
+    private func narrate(_ facts: [String]) async -> String {
+        await narrator.narrate(NarrationRequest(
+            facts: facts,
+            sanity: world.sanity,
+            placeSummary: WorldMap.place(world.place).overview,
+            carrying: ItemID.allCases.filter { world.has($0) }.map(\.name),
+            history: messages
+        ))
     }
 
     private func typingDelay(for text: String) -> Double {

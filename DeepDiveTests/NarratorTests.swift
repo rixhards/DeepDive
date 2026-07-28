@@ -7,9 +7,15 @@ import XCTest
 @testable import DeepDive
 
 final class NarratorTests: XCTestCase {
-    func testStaticNarratorReturnsBriefUnchanged() async {
+    func testStaticNarratorReturnsFactsUnchanged() async {
         let narrator = StaticNarrator()
-        let result = await narrator.narrate(brief: "a personagem está com medo", sanity: 30, history: [])
+        let result = await narrator.narrate(NarrationRequest(
+            facts: ["a personagem está com medo"],
+            sanity: 30,
+            placeSummary: "",
+            carrying: [],
+            history: []
+        ))
         XCTAssertEqual(result, "a personagem está com medo")
     }
 
