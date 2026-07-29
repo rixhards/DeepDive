@@ -11,13 +11,16 @@ enum PlaceID: String, Codable, CaseIterable {
     case salao
     case trifurcacao
     case hayRoom
-    case pastIronDoor
+    case escadaria
+    case cisterna
+    case coroa
 }
 
 enum ItemID: String, Codable, CaseIterable {
     case knife
     case lamp
     case key
+    case seal
 
     /// How she refers to it.
     var name: String {
@@ -25,6 +28,7 @@ enum ItemID: String, Codable, CaseIterable {
         case .knife: "uma faca pequena"
         case .lamp: "um lampião"
         case .key: "uma chave"
+        case .seal: "um disco de pedra"
         }
     }
 
@@ -34,6 +38,7 @@ enum ItemID: String, Codable, CaseIterable {
         case .knife: "uma faca pequena, lâmina curta, meio cega. serve pra cortar alguma coisa mole, não muito mais que isso."
         case .lamp: "um lampião com mais ou menos metade do combustível. dá pra acender e apagar."
         case .key: "uma chave de ferro, pesada, com a cabeça torta. parece antiga."
+        case .seal: "um disco de pedra do tamanho da minha mão, com os mesmos símbolos entalhados em volta da borda. é mais pesado do que devia ser."
         }
     }
 
@@ -43,6 +48,7 @@ enum ItemID: String, Codable, CaseIterable {
         case .knife: ["faca", "lâmina", "canivete"]
         case .lamp: ["lampião", "lamparina", "lanterna", "luz", "lampiao"]
         case .key: ["chave", "chavinha"]
+        case .seal: ["disco", "selo", "medalhão", "medalhao", "pedra redonda", "disco de pedra"]
         }
     }
 }
@@ -53,6 +59,8 @@ enum Flag: String, Codable {
     case warnedAboutWaiting
     case knifeBroken
     case sawCorridorHint
+    case sawFalseLight
+    case heardTheMusic
 }
 
 enum Ending: String, Codable {
@@ -69,6 +77,15 @@ struct World: Codable, Equatable {
     var visited: Set<PlaceID> = [.salao]
     var sanity: Int = 80
     var ending: Ending?
+    /// How many times she has studied the carvings. Each reading takes more of her, and the
+    /// last one finishes the job — this is the road to the surrender ending.
+    var symbolReadings: Int = 0
+    /// Reassurance works, but not forever. She notices when it becomes a routine.
+    var comfortsTaken: Int = 0
+    /// An irreversible move she's standing at the edge of, waiting for a yes or a no.
+    var pending: PendingChoice?
+    /// Counts her turns, only so repeated refusals can be phrased differently each time.
+    var turns: Int = 0
 
     var isOver: Bool { ending != nil }
 

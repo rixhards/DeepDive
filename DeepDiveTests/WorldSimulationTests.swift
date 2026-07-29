@@ -73,7 +73,8 @@ final class WorldSimulationTests: XCTestCase {
     func testLampOnHayEndsTheRun() {
         var world = World()
         world.place = .hayRoom
-        let outcome = act("joga o lampião no feno", &world)
+        _ = act("joga o lampião no feno", &world)
+        let outcome = act("sim", &world)
         XCTAssertEqual(world.ending, .taken)
         XCTAssertFalse(outcome.beats.isEmpty, "the fire plays out over several beats")
     }
@@ -87,7 +88,7 @@ final class WorldSimulationTests: XCTestCase {
 
         world.inventory.insert(.key)
         _ = act("abre a porta de ferro com a chave", &world)
-        XCTAssertEqual(world.ending, .escape, "the key is the way out")
+        XCTAssertEqual(world.place, .escadaria, "the key opens the way deeper, not straight out")
     }
 
     // MARK: - The corridor turns on whether she carries light
@@ -97,6 +98,7 @@ final class WorldSimulationTests: XCTestCase {
         world.place = .trifurcacao
         world.flags.insert(.lampLit)
         _ = act("entra no corredor", &world)
+        _ = act("sim", &world)
         XCTAssertEqual(world.ending, .taken, "light fixes the anomaly and the corridor never ends")
     }
 
@@ -105,7 +107,7 @@ final class WorldSimulationTests: XCTestCase {
         world.place = .trifurcacao
         _ = act("entra no corredor", &world)
         XCTAssertNil(world.ending, "the dark route survives")
-        XCTAssertEqual(world.place, .pastIronDoor)
+        XCTAssertEqual(world.place, .escadaria)
     }
 
     func testLampTogglesBothWays() {
@@ -123,9 +125,71 @@ final class WorldSimulationTests: XCTestCase {
         var world = World()
         world.sanity = 2
         world.place = .salao
-        _ = act("olha pros símbolos", &world)   // costs 3
+        _ = act("olha pros símbolos", &world)
         XCTAssertEqual(world.sanity, 0)
         XCTAssertEqual(world.ending, .surrender)
+    }
+
+    /// The surrender ending has to be reachable by playing, not just by arithmetic.
+    func testReadingTheCarvingsToTheEndSurrenders() {
+        var world = World()
+        for reading in 1...5 {
+            _ = act("olha pros símbolos", &world)
+            if reading < 5 {
+                XCTAssertNil(world.ending, "reading \(reading) must not end it yet")
+            }
+        }
+        XCTAssertEqual(world.ending, .surrender, "the fifth reading is the point of no return")
+    }
+
+    /// The whole point of the good ending: it takes a specific, correct route.
+    func testTheGoodEndingIsReachableByPlayingCorrectly() {
+        var world = World()
+        _ = act("segue pela estrada", &world)
+        XCTAssertEqual(world.place, .trifurcacao)
+
+        _ = act("bate na porta de madeira", &world)
+        _ = act("entra na porta de madeira", &world)
+        XCTAssertEqual(world.place, .hayRoom)
+
+        // Hands on the hay keeps the knife for the cistern — the optimal trade.
+        _ = act("enfia a mão no feno", &world)
+        XCTAssertTrue(world.has(.key))
+        XCTAssertTrue(world.has(.knife))
+
+        _ = act("volta", &world)
+        _ = act("abre a porta de ferro", &world)
+        XCTAssertEqual(world.place, .escadaria)
+
+        _ = act("desce a escada", &world)
+        XCTAssertEqual(world.place, .cisterna)
+
+        _ = act("pega o disco com a faca", &world)
+        XCTAssertTrue(world.has(.seal), "the knife fishes the seal out")
+
+        _ = act("sobe a passagem", &world)
+        XCTAssertEqual(world.place, .coroa)
+
+        _ = act("usa o disco na porta", &world)
+        XCTAssertEqual(world.ending, .escape)
+        XCTAssertGreaterThan(world.sanity, 0, "she has to come out alive and sane")
+    }
+
+    func testEnteringTheCisternWaterIsFatal() {
+        var world = World()
+        world.place = .cisterna
+        _ = act("entra na água", &world)
+        _ = act("sim", &world)
+        XCTAssertEqual(world.ending, .taken)
+    }
+
+    func testComfortStopsHealingOnceItBecomesRoutine() {
+        var world = World()
+        world.sanity = 50
+        for _ in 1...3 { _ = act("você tá bem?", &world) }
+        let afterThree = world.sanity
+        _ = act("você tá bem?", &world)
+        XCTAssertEqual(world.sanity, afterThree, "the fourth reassurance must not heal")
     }
 
     func testWaitingTwiceIsFatalButWarnsFirst() {
@@ -135,12 +199,14 @@ final class WorldSimulationTests: XCTestCase {
         XCTAssertFalse(warning.facts.joined().isEmpty)
 
         _ = act("não faz nada", &world)
+        _ = act("sim", &world)
         XCTAssertEqual(world.ending, .taken, "ignoring the warning ends it")
     }
 
     func testWalkingIntoTheWaterEndsTheRun() {
         var world = World()
         _ = act("vai pela água", &world)
+        _ = act("sim", &world)
         XCTAssertEqual(world.ending, .taken)
     }
 
@@ -168,6 +234,128 @@ final class WorldSimulationTests: XCTestCase {
         XCTAssertEqual(split?.verb, .use)
         XCTAssertEqual(split?.target, "feno")
         XCTAssertEqual(split?.instrument, "faca")
+    }
+
+    // MARK: - Regressions from on-device play (2026-07-28)
+
+    /// "va" used to match inside "descreva", turning a look into a movement command.
+    func testCuesMatchWholeWordsOnly() {
+        let world = World()
+        XCTAssertEqual(LocalActionParser.parse("descreva seus arredores", world: world)?.verb, .look)
+        XCTAssertEqual(LocalActionParser.parse("descreva o ambiente", world: world)?.verb, .look)
+        XCTAssertEqual(LocalActionParser.parse("desce as escadas", world: world)?.verb, .go)
+        XCTAssertEqual(LocalActionParser.parse("siga em frente", world: world)?.verb, .go)
+    }
+
+    /// "tenta abrir a de ferro" matched nothing locally, fell through to the model, and the
+    /// model invented the knife as the instrument — she lost it without being told to.
+    func testOpeningTheIronDoorDoesNotSilentlySpendTheKnife() {
+        var world = World()
+        world.place = .trifurcacao
+        _ = act("tenta abrir a porta de ferro", &world)
+        XCTAssertTrue(world.has(.knife), "no instrument was named, so nothing may be spent")
+        XCTAssertFalse(world.has(.knifeBroken))
+    }
+
+    // MARK: - Irreversible actions are confirmed, never blind
+
+    func testWalkingIntoTheWaterAsksBeforeKilling() {
+        var world = World()
+        let question = act("vai pela água", &world)
+        XCTAssertNil(world.ending, "she must stop and ask first")
+        XCTAssertEqual(world.pending, .enterWater)
+        XCTAssertFalse(question.facts.joined().isEmpty)
+
+        _ = act("não", &world)
+        XCTAssertNil(world.ending, "saying no backs her off")
+        XCTAssertNil(world.pending)
+        XCTAssertEqual(world.place, .salao, "and leaves her where she was")
+    }
+
+    func testConfirmingTheWaterStillKills() {
+        var world = World()
+        _ = act("vai pela água", &world)
+        _ = act("sim", &world)
+        XCTAssertEqual(world.ending, .taken)
+    }
+
+    func testANewInstructionCancelsThePendingQuestion() {
+        var world = World()
+        _ = act("vai pela água", &world)
+        _ = act("olha em volta", &world)
+        XCTAssertNil(world.pending, "changing the subject drops the idea")
+        XCTAssertNil(world.ending)
+    }
+
+    func testCorridorWithLampAsksFirst() {
+        var world = World()
+        world.place = .trifurcacao
+        world.flags.insert(.lampLit)
+        _ = act("entra no corredor", &world)
+        XCTAssertEqual(world.pending, .corridorWithLamp)
+        XCTAssertNil(world.ending)
+    }
+
+    // MARK: - She has senses
+
+    func testSheCanListenAndSmellEverywhere() {
+        for id in PlaceID.allCases {
+            var world = World()
+            world.place = id
+            XCTAssertFalse(act("escuta", &world).facts.joined().isEmpty, "no sound in \(id.rawValue)")
+
+            var other = World()
+            other.place = id
+            XCTAssertFalse(act("que cheiro tem aí", &other).facts.joined().isEmpty, "no smell in \(id.rawValue)")
+        }
+    }
+
+    func testRepeatedFailuresDoNotRepeatTheSameLine() {
+        var world = World()
+        let first = act("olha pro helicóptero", &world).facts.joined()
+        let second = act("olha pro helicóptero", &world).facts.joined()
+        XCTAssertNotEqual(first, second, "she must not say the exact same thing twice in a row")
+    }
+
+    // MARK: - She must never move on her own (regression, 2026-07-28)
+
+    /// "Oi, quem é você?" walked her all the way to the next scene, because a stray short
+    /// target matched an exit through bidirectional substring matching.
+    func testAskingWhoSheIsDoesNotMoveHer() {
+        var world = World()
+        let said = act("Oi, quem é você?", &world).facts.joined(separator: " ")
+        XCTAssertEqual(world.place, .salao, "a question must never relocate her")
+        XCTAssertFalse(said.isEmpty)
+        XCTAssertTrue(said.contains("nome"), "she should actually answer it: \(said)")
+    }
+
+    func testConversationalQuestionsAreAnsweredNotObeyed() {
+        for question in ["o que aconteceu com você?", "que lugar é esse?", "há quanto tempo você tá aí?",
+                         "você tá sozinha?", "você se machucou?", "você sabe quem eu sou?"] {
+            var world = World()
+            let said = act(question, &world).facts.joined(separator: " ")
+            XCTAssertEqual(world.place, .salao, "\(question) must not move her")
+            XCTAssertNil(world.ending, "\(question) must not end the run")
+            XCTAssertFalse(said.isEmpty, "\(question) went unanswered")
+        }
+    }
+
+    /// A one-letter target used to satisfy almost every exit alias in the room.
+    func testShortOrUnrelatedTargetsDoNotOpenExits() {
+        for junk in ["e", "o", "a", "re", "tra", "helicóptero"] {
+            var world = World()
+            _ = act("vai \(junk)", &world)
+            XCTAssertEqual(world.place, .salao, "'\(junk)' must not match a real exit")
+        }
+    }
+
+    func testAliasMatchingDistinguishesSimilarThings() {
+        XCTAssertTrue("ferro".matchesAlias("porta de ferro"))
+        XCTAssertTrue("porta de ferro".matchesAlias("ferro"))
+        XCTAssertTrue("escadas".matchesAlias("escada"))
+        XCTAssertFalse("porta de ferro".matchesAlias("porta de madeira"))
+        XCTAssertFalse("e".matchesAlias("estrada"))
+        XCTAssertFalse("tra".matchesAlias("estrada"))
     }
 
     func testHostilityIsDetectedAndCostsSanity() {

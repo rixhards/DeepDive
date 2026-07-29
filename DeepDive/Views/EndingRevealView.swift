@@ -10,6 +10,7 @@ import SwiftUI
 struct EndingRevealView: View {
     let ending: Ending?
     let onRestart: () -> Void
+    var onMenu: (() -> Void)?
 
     /// pt-BR label for an ending. Ids stay English like every other identifier; only what the
     /// player reads is translated.
@@ -29,14 +30,27 @@ struct EndingRevealView: View {
                 .foregroundStyle(Theme.timestampColor)
                 .multilineTextAlignment(.center)
 
-            Button(action: onRestart) {
-                Text("recomeçar")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(Theme.optionBackground)
-                    .clipShape(Capsule())
+            HStack(spacing: 10) {
+                Button(action: onRestart) {
+                    Text("recomeçar")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Theme.optionBackground)
+                        .clipShape(Capsule())
+                }
+
+                if let onMenu {
+                    Button(action: onMenu) {
+                        Text("menu")
+                            .font(.headline)
+                            .foregroundStyle(Theme.timestampColor)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .overlay(Capsule().stroke(Theme.optionBackground, lineWidth: 1))
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity)

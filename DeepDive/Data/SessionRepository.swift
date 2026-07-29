@@ -80,4 +80,12 @@ struct SessionRepository {
     private func existingRecord() throws -> SavedSession? {
         try modelContext.fetch(FetchDescriptor<SavedSession>()).first
     }
+
+    /// Whether there's a resumable run, for the menu's "continuar". Cheap enough to call on
+    /// every menu appearance.
+    static func savedRunExists() -> Bool {
+        guard let repository = try? SessionRepository() else { return false }
+        guard let session = repository.load() else { return false }
+        return !session.world.isOver
+    }
 }

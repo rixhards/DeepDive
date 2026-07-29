@@ -29,8 +29,10 @@ struct InterpretedAction {
     var target: String
 
     @Guide(description: """
-    The item the character should act WITH, when the player names one — for example "faca" in \
-    "corta o feno com a faca". Leave empty when no item is named.
+    The item the character should act WITH, but ONLY when the player literally wrote the item's \
+    name in their message — for example "faca" in "corta o feno com a faca". Leave this EMPTY \
+    whenever the player did not name an item. Never fill it in with something she happens to be \
+    carrying, and never guess which tool would be useful.
     """)
     var instrument: String
 
@@ -39,6 +41,19 @@ struct InterpretedAction {
 }
 
 struct FoundationModelsActionParser: ActionParser {
+
+    /// Words that have to be present before the model is allowed to relocate her.
+    private static let movementWords = [
+        "vai", "va", "anda", "ande", "caminha", "segue", "siga", "entra", "entre", "atravessa",
+        "sobe", "suba", "desce", "desca", "volta", "volte", "retorna", "sai", "saia", "avanca",
+        "avance", "corre", "corra", "foge", "fuja", "prossegue", "frente", "adiante", "explora",
+        "explore", "continua", "continue", "leva", "ir", "vamos", "segui", "passa", "passe",
+    ]
+
+    private static func mentionsMovement(_ foldedText: String) -> Bool {
+        let padded = " \(foldedText) "
+        return movementWords.contains { padded.contains(" \($0) ") }
+    }
 
     func parse(playerText: String, world: World) async -> PlayerAction {
         if let local = LocalActionParser.parse(playerText, world: world) {
@@ -83,10 +98,37 @@ struct FoundationModelsActionParser: ActionParser {
             let response = try await session.respond(to: playerText, generating: InterpretedAction.self)
             let content = response.content
             let verb = Verb(rawValue: content.verb.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? .unknown
+
+            // The model likes to helpfully fill in a tool she happens to be carrying, which
+            // silently spends items the player never mentioned. Only honour an instrument the
+            // player actually wrote.
+            let spoken = playerText.folded
+            let instrument = content.instrument.isEmpty ? nil : content.instrument
+            let confirmedInstrument = instrument.flatMap { candidate -> String? in
+                let named = ItemID.allCases.contains { item in
+                    item.aliases.contains { alias in
+                        candidate.folded.contains(alias.folded) && spoken.contains(alias.folded)
+                    }
+                }
+                return named ? candidate : nil
+            }
+            if instrument != nil, confirmedInstrument == nil {
+                print("FoundationModelsActionParser: dropped invented instrument \"\(instrument!)\" — not present in \"\(playerText)\"")
+            }
+
+            // Moving is the only verb that changes the scene, so it's the only one whose
+            // mistakes the player really notices. If the model wants to move her, the player
+            // has to have actually said something about moving — otherwise "quem é você?"
+            // can walk her down the road.
+            if verb == .go, !Self.mentionsMovement(spoken) {
+                print("FoundationModelsActionParser: refused to move on \"\(playerText)\" — no movement language in it")
+                return PlayerAction(verb: .unknown, isHostile: content.isHostile)
+            }
+
             return PlayerAction(
                 verb: verb,
                 target: content.target.isEmpty ? nil : content.target,
-                instrument: content.instrument.isEmpty ? nil : content.instrument,
+                instrument: confirmedInstrument,
                 isHostile: content.isHostile
             )
         } catch {

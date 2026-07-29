@@ -6,13 +6,32 @@
 import SwiftUI
 
 struct ChatView: View {
+    var onExit: (() -> Void)?
+
     @State private var viewModel = ChatViewModel()
     @State private var inputText = ""
+    @State private var isConfirmingRestart = false
 
     var body: some View {
         chatBody
             .background(Theme.background.ignoresSafeArea())
             .onAppear { viewModel.start() }
+            .confirmationDialog(
+                "recomeçar a partida?",
+                isPresented: $isConfirmingRestart,
+                titleVisibility: .visible
+            ) {
+                Button("recomeçar do início", role: .destructive) {
+                    inputText = ""
+                    viewModel.restart()
+                }
+                if onExit != nil {
+                    Button("voltar ao menu") { onExit?() }
+                }
+                Button("continuar jogando", role: .cancel) {}
+            } message: {
+                Text("tudo que ela viveu até aqui se perde.")
+            }
     }
 
     private var chatBody: some View {
@@ -52,10 +71,14 @@ struct ChatView: View {
                 }
 
                 if viewModel.isFinished {
-                    EndingRevealView(ending: viewModel.reachedEnding) {
-                        inputText = ""
-                        viewModel.restart()
-                    }
+                    EndingRevealView(
+                        ending: viewModel.reachedEnding,
+                        onRestart: {
+                            inputText = ""
+                            viewModel.restart()
+                        },
+                        onMenu: onExit
+                    )
                 } else if !viewModel.isTyping {
                     ComposerView(text: $inputText, isDisabled: false) {
                         viewModel.send(inputText)
@@ -77,8 +100,15 @@ struct ChatView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             Spacer()
-            Image(systemName: "ellipsis")
-                .foregroundStyle(.white)
+            Button {
+                isConfirmingRestart = true
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44, alignment: .trailing)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("opções da partida")
         }
         .padding(.horizontal, Theme.screenPadding)
         .padding(.vertical, 12)

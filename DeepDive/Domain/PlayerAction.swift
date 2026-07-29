@@ -22,8 +22,24 @@ enum Verb: String, Codable, CaseIterable {
     case wait
     /// Ask her about herself — how she is, whether she's hurt, reassurance.
     case talk
+    /// Ask her a question about who she is, what happened, or where she thinks she is.
+    /// The most natural first thing a player types, and it is not a world action.
+    case ask
     /// Ask what she's carrying.
     case inventory
+    /// Stop and pay attention to sound.
+    case listen
+    /// What the place smells like.
+    case smell
+    /// Call out into the dark. Not always free.
+    case shout
+    /// Look for somewhere to not be seen.
+    case hide
+    /// Sit down, catch her breath.
+    case rest
+    /// Answers to a question she asked. Only meaningful while something is pending.
+    case yes
+    case no
     case unknown
 }
 

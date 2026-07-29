@@ -52,12 +52,17 @@ struct FoundationModelsNarrator: Narrator {
         - Sanidade alta → frases completas e coerentes. Sanidade baixa → frases curtas, \
           cortadas, repetições, hesitação ("não sei... não sei mais...").
 
-        Estilo (como mensagens de WhatsApp reais em português do Brasil são escritas):
-        - minúsculas na maior parte do tempo, pontuação mínima, sem formalidade
+        Estilo (como uma pessoa real digitando no WhatsApp, com pressa e com medo):
+        - Escreva com pontuação e maiúsculas normais: maiúscula no começo de cada frase e \
+          depois de ponto final. Nomes próprios com maiúscula.
+        - Ainda assim é conversa, não redação: frases curtas, vocabulário coloquial, contrações \
+          ("tô", "tá", "pra", "cadê"). Nunca literário, nunca narração de livro.
         - PREFIRA uma mensagem única e curta. Só quebre em 2–3 mensagens separadas por quebra \
-          de linha se os FATOS tiverem mais de uma ideia distinta — nunca encha linguiça.
-        - vocabulário coloquial, nunca literário ou de narração de livro
-        - máximo 400 caracteres no total
+          de linha se os FATOS tiverem mais de uma ideia distinta.
+        - NUNCA repita a mesma ideia com outras palavras dentro da mesma resposta. Se os FATOS \
+          são curtos, a resposta é curta — não encha linguiça, não repita "não sei o que fazer" \
+          várias vezes, não recicle a mesma frase.
+        - máximo 320 caracteres no total
 
         Exemplos:
         FATOS: "a personagem ouve um barulho vindo do corredor e fica com medo"
