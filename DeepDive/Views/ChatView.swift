@@ -13,7 +13,22 @@ struct ChatView: View {
     @State private var isConfirmingRestart = false
 
     var body: some View {
-        chatBody
+        Group {
+            if viewModel.isFinished {
+                // Each ending gets its own exclusive screen, replacing the chat.
+                EndingRevealView(
+                    ending: viewModel.reachedEnding,
+                    onRestart: {
+                        inputText = ""
+                        viewModel.restart()
+                    },
+                    onMenu: onExit
+                )
+            } else {
+                chatBody
+            }
+        }
+        .animation(.easeInOut(duration: 0.6), value: viewModel.isFinished)
             .background(Theme.background.ignoresSafeArea())
             .onAppear { viewModel.start() }
             .confirmationDialog(

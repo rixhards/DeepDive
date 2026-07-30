@@ -7,13 +7,14 @@
 
 import Foundation
 
-struct Outcome {
+nonisolated struct Outcome {
     /// What must be communicated. Written as her own words already — the narrator adjusts
     /// voice and register, it does not invent.
     var facts: [String]
     /// Follow-up messages delivered in order, with no player input in between.
     var beats: [String] = []
-    /// Deliver verbatim, skipping the narrator. For text that is malformed on purpose.
+    /// Deliver verbatim, skipping the narrator. For authored climaxes and text that is
+    /// malformed on purpose.
     var raw: Bool = false
     /// Player messages this outcome swallows unanswered before the game ends.
     var silentTurns: Int = 0
@@ -34,4 +35,14 @@ struct Outcome {
         self.silentTurns = silentTurns
         self.narratesEnding = narratesEnding
     }
+
+    /// Every line, in delivery order. Only meaningful for `raw` outcomes, where the text goes
+    /// out exactly as authored.
+    var allTexts: [String] { facts + beats }
+
+    /// Each group becomes one narrated message: the facts land together, then every beat on
+    /// its own so a scene arrives in pieces.
+    var narratableChunks: [[String]] { [facts] + beats.map { [$0] } }
+
+    var isEmpty: Bool { allTexts.allSatisfy(\.isEmpty) }
 }

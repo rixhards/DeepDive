@@ -14,7 +14,7 @@
 
 import Foundation
 
-enum LocalActionParser {
+nonisolated enum LocalActionParser {
 
     /// Order matters twice over: the earliest match in the sentence wins, and ties go to
     /// whichever verb is listed first here. So specific phrasings come before generic ones.
@@ -27,7 +27,8 @@ enum LocalActionParser {
                  "nao se mexe", "nao se mexa", "espera", "espere", "aguarda", "aguarde",
                  "nao anda", "nao ande", "para quieta"]),
         (.yes, ["sim", "isso", "pode ir", "pode sim", "vai fundo", "manda ver", "com certeza",
-                "claro", "aham", "uhum", "faz isso", "faca isso", "confirma", "confirmo"]),
+                "claro", "aham", "uhum", "faz isso", "faca isso", "confirma", "confirmo",
+                "pode entrar", "pode abrir", "entra sim", "vai sim", "tenho certeza"]),
         (.no, ["nao", "melhor nao", "pare", "deixa", "deixe", "esquece", "esqueca",
                "cancela", "cancele", "recua", "desiste", "nem pensar", "de jeito nenhum"]),
 
@@ -80,14 +81,22 @@ enum LocalActionParser {
                     "inspecione", "analisa", "analise", "da uma olhada", "de uma olhada",
                     "descreve", "descreva", "ve o", "ve a", "olha", "olhe"]),
 
+        // Knocking must beat the generic "use" cues: it's the difference between surviving
+        // the hay room and not.
+        (.knock, ["bate", "bata", "bater", "da uma batida", "de uma batida", "toca na porta"]),
+
+        // Burning must also beat "use": searching the hay finds the key, burning it is a death.
+        (.burn, ["queima", "queime", "poe fogo", "põe fogo", "bota fogo", "toca fogo",
+                 "ateia fogo", "ateie fogo", "incendeia", "incendeie"]),
+
         (.take, ["pega", "pegue", "recolhe", "recolha", "guarda", "guarde", "apanha", "apanhe",
                  "leva", "leve", "tira", "tire"]),
 
         (.use, ["usa", "use", "utiliza", "utilize", "toca", "toque", "encosta", "encoste",
-                "bate", "bata", "abre", "abra", "abrir", "empurra", "empurre", "puxa", "puxe",
-                "forca", "force", "corta", "corte", "queima", "queime", "acende", "acenda",
+                "abre", "abra", "abrir", "empurra", "empurre", "puxa", "puxe",
+                "forca", "force", "corta", "corte", "acende", "acenda",
                 "apaga", "apague", "enfia", "enfie", "mexe", "mexa", "revira", "revire",
-                "destranca", "destranque", "arromba", "arrombe", "poe fogo", "bota fogo",
+                "destranca", "destranque", "arromba", "arrombe",
                 "joga", "jogue", "atira", "encaixa", "encaixe", "gira", "gire", "tenta abrir",
                 "procura", "procure", "vasculha", "vasculhe", "cava", "cave"]),
 
@@ -97,13 +106,78 @@ enum LocalActionParser {
                "avanca", "avance", "corre", "corra", "foge", "fuja", "prossegue", "prossiga"]),
     ]
 
-    private static let hostileCues = [
+    /// The two tones the local pass can read without a model. Anything neither list catches
+    /// is neutral — the FoundationModels parser refines this for the phrasings it handles.
+    private static let distressingCues = [
+        // Insults
         "cala a boca", "cala boca", "burra", "idiota", "imbecil", "para de chorar",
         "anda logo", "se mexe logo", "inutil", "merda", "porra", "estupida", "otaria",
-        "para de frescura", "deixa de ser", "voce e inutil",
+        "para de frescura", "deixa de ser", "voce e inutil", "cala essa boca",
+        // Threats and cruelty
+        "voce vai morrer", "ninguem vai te salvar", "voce nao sai mais dai", "morre",
+        "se mata", "voce ja morreu", "espero que morra", "voce merece",
+        // Abandonment — the player saying, in any words, that they won't help
+        "nao ligo", "nao me importo", "nao quero ajudar", "nao vou te ajudar",
+        "nao vou ajudar", "me deixa em paz", "problema seu", "resolve sozinha",
+        "resolve isso sozinha", "se vira", "vira sozinha", "desisto de voce", "desisto",
+        "nao interessa", "tanto faz", "pouco me importa", "nem quero saber",
+        "nao é meu problema", "nao e meu problema", "fodase", "foda se", "to fora",
+        "estou fora", "nao vou responder", "vou embora", "cansei de voce", "sai fora",
     ]
 
-    static func parse(_ playerText: String, world: World) -> PlayerAction? {
+    private static let supportiveCues = [
+        "calma", "fica calma", "respira", "respire", "vai dar certo", "voce consegue",
+        "to aqui", "to contigo", "estou aqui", "estou contigo", "nao te abandono",
+        "confia em mim", "conta comigo", "voce e forte", "coragem", "forca",
+        "nao desiste", "eu te ajudo", "vou te tirar dai", "aguenta firme", "tenho orgulho",
+    ]
+
+    /// Splits a message into the acts it actually contains, in order. Conservative on
+    /// purpose: it only splits when *every* part carries an action verb of its own, so
+    /// "não sei quem é você, não ligo" stays one message while "pega a faca e vai pela
+    /// água" becomes two.
+    static func splitClauses(_ playerText: String) -> [String] {
+        let whole = [playerText]
+        // Longest first, so " e depois " never splits as " e " leaving a stray "depois".
+        let separators = [" e depois ", " e daí ", " e aí ", " depois disso ", ", depois ",
+                          " depois ", " então ", " em seguida ", " e logo ", " e ", "; ", " após "]
+
+        // Separators are matched on the original string with folding options, so the indices
+        // are the player's own — no offset arithmetic between two different strings.
+        var parts: [String] = []
+        var remaining = playerText
+        var separator: String?
+        while parts.count < TurnRunner.maxClauses - 1 {
+            let found = separators.compactMap { candidate -> (String, Range<String.Index>)? in
+                guard let range = remaining.range(
+                    of: candidate,
+                    options: [.diacriticInsensitive, .caseInsensitive]
+                ) else { return nil }
+                return (candidate, range)
+            }
+            // Earliest match wins; ties go to the longest separator (they're listed longest first).
+            guard let hit = found.min(by: { $0.1.lowerBound < $1.1.lowerBound }) else { break }
+            separator = hit.0
+            parts.append(String(remaining[..<hit.1.lowerBound]))
+            remaining = String(remaining[hit.1.upperBound...])
+        }
+        guard separator != nil else { return whole }
+        parts.append(remaining)
+
+        let trimmed = parts
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        // Every part must stand on its own as an instruction, and none of them may be a
+        // bare yes/no — "sim e pode ir" is one answer, not two acts.
+        let allActionable = trimmed.allSatisfy { part in
+            guard let verb = parse(part, state: GameState())?.verb else { return false }
+            return ![.unknown, .yes, .no].contains(verb)
+        }
+        return trimmed.count > 1 && allActionable ? trimmed : whole
+    }
+
+    static func parse(_ playerText: String, state: GameState) -> PlayerAction? {
         // Punctuation would otherwise glue itself to the last word and defeat the
         // whole-word lookups below ("vc ta bem?" must still match "vc ta bem").
         let text = playerText.folded
@@ -114,11 +188,11 @@ enum LocalActionParser {
 
         // Padding lets every lookup below demand whole words on both sides.
         let padded = " \(text) "
-        let hostile = hostileCues.contains { padded.contains(" \($0.folded) ") || text.contains($0.folded) }
+        let tone = classifyTone(padded: padded, text: text)
 
         guard let match = firstVerb(in: padded) else {
-            // Hostility on its own is still a readable act, even with no verb.
-            return hostile ? PlayerAction(verb: .talk, isHostile: true) : nil
+            // A pure emotional message with no verb is still a readable act.
+            return tone == .neutral ? nil : PlayerAction(verb: .talk, tone: tone)
         }
 
         let remainder = String(padded[match.range.upperBound...])
@@ -152,35 +226,50 @@ enum LocalActionParser {
             verb: match.verb,
             target: target?.isEmpty == true ? nil : target,
             instrument: instrument,
-            isHostile: hostile
+            tone: tone
         )
     }
 
+    private static func classifyTone(padded: String, text: String) -> Tone {
+        if distressingCues.contains(where: { padded.contains(" \($0.folded) ") || text.contains($0.folded) }) {
+            return .distressing
+        }
+        if supportiveCues.contains(where: { padded.contains(" \($0.folded) ") || text.contains($0.folded) }) {
+            return .supportive
+        }
+        return .neutral
+    }
+
     private static func firstVerb(in padded: String) -> (verb: Verb, cue: String, range: Range<String.Index>)? {
-        var best: (verb: Verb, cue: String, range: Range<String.Index>)?
+        // Raw (space-padded) ranges throughout, so positions compare like with like — mixing
+        // in the trimmed range made a longer cue at the same position always "win", which
+        // broke the documented earliest-then-first-listed contract.
+        var best: (verb: Verb, cue: String, raw: Range<String.Index>)?
 
         for (verb, cues) in verbCues {
             for cue in cues {
                 // The surrounding spaces are the whole point: they stop "va" from matching
                 // inside "descreva".
                 guard let range = padded.range(of: " \(cue.folded) ") else { continue }
-                if best == nil || range.lowerBound < best!.range.lowerBound {
-                    // Trim the padding spaces back off so the remainder starts cleanly.
-                    let inner = padded.index(after: range.lowerBound)..<padded.index(before: range.upperBound)
-                    best = (verb, cue, inner)
+                if best == nil || range.lowerBound < best!.raw.lowerBound {
+                    best = (verb, cue, range)
                 }
             }
             // A cue that starts the sentence can't be beaten by anything later.
-            if let best, best.range.lowerBound == padded.index(after: padded.startIndex) {
-                return best
+            if let best, best.raw.lowerBound == padded.startIndex {
+                break
             }
         }
-        return best
+
+        guard let best else { return nil }
+        // Trim the padding spaces back off so the remainder starts cleanly.
+        let inner = padded.index(after: best.raw.lowerBound)..<padded.index(before: best.raw.upperBound)
+        return (best.verb, best.cue, inner)
     }
 }
 
-private extension String {
-    /// Drops leading articles/prepositions so "a porta de ferro" and "porta de ferro" match alike.
+nonisolated private extension String {
+    /// Drops leading articles/prepositions so "a porta de aço" and "porta de aço" match alike.
     var strippedArticles: String {
         var result = trimmingCharacters(in: .whitespacesAndNewlines)
         // Repeated: "pros símbolos" strips to "símbolos" in two passes.

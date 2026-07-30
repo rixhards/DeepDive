@@ -1,53 +1,53 @@
 //
-//  Place.swift
+//  Beat.swift
 //  DeepDive
 //
-//  Shape of a location. Content lives in WorldMap; this file only describes the mould.
+//  Shape of a scene. Content lives in WorldMap; this file only describes the mould.
 
 import Foundation
 
-/// Something in a place the player can look at or act on. Enumerating these once is what
-/// makes a room feel answerable — every feature is examinable without authoring an option.
-struct Feature {
+/// Something in a beat the player can look at or act on. Enumerating these once is what
+/// makes a scene feel answerable — every feature is examinable without authoring an option.
+nonisolated struct Feature {
     let id: String
     /// Words the player might use for it. Matched after diacritic/case folding.
     let aliases: [String]
     /// What she reports when she looks at it.
     let detail: String
+    /// Cost of examining it, for the disturbing ones (spec range: -2 to -8). Zero for the
+    /// harmless majority.
+    let sanityDelta: Int
 
-    init(_ id: String, aliases: [String], detail: String) {
+    init(_ id: String, aliases: [String], detail: String, sanityDelta: Int = 0) {
         self.id = id
         self.aliases = aliases
         self.detail = detail
+        self.sanityDelta = sanityDelta
     }
 }
 
-struct Exit {
+nonisolated struct Exit {
     let aliases: [String]
-    let destination: PlaceID
+    let destination: BeatID
     /// When present and unmet, she refuses with `blocked` instead of moving.
-    let requires: ((World) -> Bool)?
+    let requires: ((GameState) -> Bool)?
     let blocked: String?
-    /// Applied when she actually goes through.
-    let sanityDelta: Int
 
     init(
         aliases: [String],
-        to destination: PlaceID,
-        requires: ((World) -> Bool)? = nil,
-        blocked: String? = nil,
-        sanityDelta: Int = 0
+        to destination: BeatID,
+        requires: ((GameState) -> Bool)? = nil,
+        blocked: String? = nil
     ) {
         self.aliases = aliases
         self.destination = destination
         self.requires = requires
         self.blocked = blocked
-        self.sanityDelta = sanityDelta
     }
 }
 
-struct Place {
-    let id: PlaceID
+nonisolated struct Beat {
+    let id: BeatID
     /// What she says the first time she arrives.
     let arrival: String
     /// What she says on coming back — never a verbatim repeat of `arrival`.
@@ -63,11 +63,11 @@ struct Place {
     let smell: String
     let features: [Feature]
     let exits: [Exit]
-    /// Items lying here to be found, and what she says on picking each one up.
+    /// Items lying here to be found.
     let items: [ItemID]
 
     init(
-        id: PlaceID,
+        id: BeatID,
         arrival: String,
         arrivalBeats: [String] = [],
         revisit: String,
@@ -99,13 +99,13 @@ struct Place {
     }
 }
 
-extension String {
+nonisolated extension String {
     /// Whole-word alias matching. Deliberately *not* plain containment in either direction:
     /// that made a one-letter target match half the exits in the room, which is how she
     /// started walking off on her own.
     ///
-    /// One side's significant words must all appear on the other side, so "ferro" matches
-    /// "porta de ferro" while "porta de ferro" never matches "porta de madeira".
+    /// One side's significant words must all appear on the other side, so "aço" matches
+    /// "porta de aço" while "porta de aço" never matches "porta de madeira".
     func matchesAlias(_ alias: String) -> Bool {
         let mine = Self.significantWords(folded)
         let theirs = Self.significantWords(alias.folded)
@@ -119,13 +119,13 @@ extension String {
 
     private static func significantWords(_ text: String) -> [String] {
         // Articles and prepositions carry no meaning for matching and would let a stray "de"
-        // satisfy an alias on its own.
+        // satisfy an alias on its own. "aço" stays: it's short but it names the door.
         let noise: Set<String> = ["o", "a", "os", "as", "um", "uma", "de", "do", "da", "dos",
                                   "das", "no", "na", "em", "pra", "para", "pro", "ao", "e"]
         return text
             .split(separator: " ")
             .map(String.init)
-            .filter { $0.count >= 3 && !noise.contains($0) }
+            .filter { ($0.count >= 3 || $0 == "aco") && !noise.contains($0) }
     }
 
     /// Equal, or one is a prefix of the other — so "escada" matches "escadas" without a stemmer.

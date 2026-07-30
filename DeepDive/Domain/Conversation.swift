@@ -10,7 +10,7 @@
 
 import Foundation
 
-enum Conversation {
+nonisolated enum Conversation {
 
     struct Topic {
         let id: String

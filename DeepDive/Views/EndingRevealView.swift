@@ -2,8 +2,9 @@
 //  EndingRevealView.swift
 //  DeepDive
 //
-//  Shown in place of the composer once a run is over: names the ending reached and offers a
-//  fresh run. "Voltar ao menu" arrives with the menu itself (spec 010).
+//  The exclusive screen each ending gets: a short original phrase in the tone of that
+//  ending (never a real quotation), the ambient music, and the way back. Replaces the chat
+//  entirely once a run is over.
 
 import SwiftUI
 
@@ -12,31 +13,49 @@ struct EndingRevealView: View {
     let onRestart: () -> Void
     var onMenu: (() -> Void)?
 
-    /// pt-BR label for an ending. Ids stay English like every other identifier; only what the
-    /// player reads is translated.
+    /// Drawn once per appearance — the death phrase is random among five and must not
+    /// reshuffle on every re-render.
+    @State private var phrase = ""
+
+    /// pt-BR label for an ending. Ids stay English like every other identifier; only what
+    /// the player reads is translated.
     private var label: String {
         switch ending {
         case .escape: "você a tirou de lá"
-        case .surrender: "ela parou de procurar a saída"
-        case .taken: "levaram ela"
+        case .madness: "ela parou de querer sair"
+        case .death: "ela não conseguiu sair"
         case nil: "acabou"
         }
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(Theme.timestampColor)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 0) {
+            Spacer()
 
-            HStack(spacing: 10) {
+            VStack(spacing: 24) {
+                Text(label)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.timestampColor)
+                    .textCase(.lowercase)
+
+                Text(phrase)
+                    .font(.system(size: 24, weight: .light, design: .serif))
+                    .italic()
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            VStack(spacing: 12) {
                 Button(action: onRestart) {
                     Text("recomeçar")
                         .font(.headline)
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                         .background(Theme.optionBackground)
                         .clipShape(Capsule())
                 }
@@ -46,26 +65,46 @@ struct EndingRevealView: View {
                         Text("menu")
                             .font(.headline)
                             .foregroundStyle(Theme.timestampColor)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
                             .overlay(Capsule().stroke(Theme.optionBackground, lineWidth: 1))
                     }
                 }
             }
+            .padding(.horizontal, 40)
+
+            Spacer()
+                .frame(height: 60)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Theme.screenPadding)
-        .padding(.vertical, 20)
-        .background(Theme.headerBackground)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background.ignoresSafeArea())
+        .onAppear {
+            phrase = Self.endingPhrase(for: ending)
+            AudioManager.shared.playAmbience()
+        }
+        .onDisappear {
+            AudioManager.shared.stop()
+        }
+    }
+
+    private static func endingPhrase(for ending: Ending?) -> String {
+        switch ending {
+        case .escape: WorldMap.escapeEndingPhrase
+        case .madness: WorldMap.madnessEndingPhrase
+        case .death: WorldMap.deathEndingPhrases.randomElement() ?? ""
+        case nil: ""
+        }
     }
 }
 
-#Preview {
-    ZStack {
-        Theme.background.ignoresSafeArea()
-        VStack {
-            Spacer()
-            EndingRevealView(ending: .taken, onRestart: {})
-        }
-    }
+#Preview("morte") {
+    EndingRevealView(ending: .death, onRestart: {}, onMenu: {})
+}
+
+#Preview("fuga") {
+    EndingRevealView(ending: .escape, onRestart: {})
+}
+
+#Preview("loucura") {
+    EndingRevealView(ending: .madness, onRestart: {})
 }

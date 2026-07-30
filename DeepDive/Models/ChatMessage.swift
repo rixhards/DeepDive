@@ -5,12 +5,12 @@
 
 import Foundation
 
-enum MessageSender: Codable {
+nonisolated enum MessageSender: Codable {
     case player
     case character
 }
 
-struct ChatMessage: Identifiable, Equatable, Codable {
+nonisolated struct ChatMessage: Identifiable, Equatable, Codable {
     let id: UUID
     let text: String
     let sender: MessageSender

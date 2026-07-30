@@ -114,27 +114,57 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 - `.claude/skills/` — reusable procedures Claude Code can auto-load (e.g. `generate-spec`)
 - `.claude/agents/` — subagents (e.g. `spec-reviewer`)
 
-## Current status (2026-07-28)
+## Current status (2026-07-29)
 
-**The JSON dialog tree is gone.** [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md)
-replaced it with a Swift world simulation, because the tree capped the character at 37 authored
-lines and structurally could not answer "onde você está?" or "o que você tem aí?".
+**The scope-reduction refactor is done.** Its sources of truth live at the repo root:
+`ARCHITECTURE.md` (stack, state shape, Foundation Models context strategy, App Intents) and
+`GAME_SCOPE.md` (scenes, items, mechanics, endings); `REFACTOR_INSTRUCTIONS.md` translated
+both into the implementation.
 
-The loop is now: player text → `ActionParser` extracts a **verb + target** → `ActionResolver`
-decides the outcome against `World` → `Narrator` says it in her voice. Places list their
-**features**, so everything listed is examinable without authoring an option for it.
+The loop is: player text → `ActionParser` extracts a **verb + target + tone** →
+`ActionResolver` decides the outcome against `GameState` → `Narrator` says it in her voice.
+Beats list their **features**, so everything listed is examinable without authoring an option.
 
-- `World.swift` — the authoritative state (place, inventory, flags, sanity, ending)
-- `WorldMap.swift` — **all narrative prose**; add a place by listing what's in it
-- `ActionResolver.swift` — the interaction rules (knife vs hands vs lamp on the hay, etc.)
+- `GameState.swift` — the authoritative state (`BeatID`, inventory, flags, sanity, lamp fuel)
+- `StoryMemory.swift` — compact LLM context, rebuilt from `GameState` at beat boundaries
+- `WorldMap.swift` — **all narrative prose**: 6 beats, fixed death/madness/escape scripts,
+  unprompted messages, ending-screen phrases
+- `ActionResolver.swift` — the interaction rules (knock mechanic, fuel, lockpick, hay search…)
+- `TurnRunner.swift` — one player message → one or more acts ("pega a faca **e** vai pela água")
 - `LocalActionParser.swift` — deterministic pt-BR verb matching, no AI needed
+- `FoundationModelsNarrator.swift` — one session per beat, proactive `contextSize` monitoring
+- `Intents/DeepDiveIntents.swift` — Siri/Shortcuts talk to her through the same pipeline
 
-Three endings (008, unchanged in behaviour): escape, surrender (sanity 0), taken. Debug sanity
-meter is **on** (`DebugFlags.showSanityMeter`) — turn it off before shipping; the game is meant
-to have no HUD.
+**Concurrency:** the project builds with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so every
+type is main-actor unless it says otherwise. The whole engine is explicitly `nonisolated` —
+App Intents run outside the UI and must be able to take a turn. Keep it that way: view models
+and the two model-backed types (`FoundationModels*`) stay main-actor, the engine stays free.
 
-Specs 002/003/004/006/009 are superseded by ADR-002 and kept only as history. Specs 001, 005,
-007 and 008 still describe live behaviour.
+**Behaviour rules that took device play to find (don't regress these):**
+- A **pending question survives** anything that isn't an answer: passive verbs (look, ask,
+  listen…) and unparsed text keep it alive and she restates it. Only another *act* drops it —
+  that's the "voltar" escape hatch. Repeating the same move *is* an answer (insistence).
+- **Nothing from the prompt may reach the screen.** Her emotional register goes in as one
+  adjective, never a number, and `clean()` deletes anything that smells like scaffolding.
+  She once typed "SANIDADE agora: 70/100" to the player.
+- **She must not repeat herself.** `stripRepeats` drops sentences she just said; atmospheric
+  facts are deliberately absent from `StoryMemory.immutableFacts` because the model parroted
+  them into every message.
+- **Hostility escalates** (−4, −8, …) and `GameState.abandonmentLimit` distressing messages
+  end the run in a death — being left alone in there is its own way to die. This is a
+  5th death scenario, added on top of GAME_SCOPE's four at the product owner's request.
 
-**Known gaps:** `pastIronDoor` is a placeholder ending, the world is only three real places, and
-sanity 0 is hard to reach — all of them need more authored content, not more engine.
+Map: salão (spawn) → trilha na água (fatal) / trifurcação (hub) → corredor (fatal with the
+lamp lit, bypass in the dark), porta de aço (escape, needs the key) and sala do feno (knock
+first; the key is in the hay). Three endings: **escape** (sanity variants: ≥80 whole /
+40–79 shaken / <40 refuses to leave), **death** (4 scripted scenarios) and **madness**
+(sanity 0). Death, madness and escape scenes are pre-authored scripts delivered verbatim —
+never model-generated (Foundation Models guardrails can refuse dark content).
+
+Ambient-audio infrastructure exists (`AudioManager`); drop `ambience.m4a`/`.mp3` into the
+bundle to hear it. Debug sanity meter is **on** (`DebugFlags.showSanityMeter`) — turn it off
+before shipping; the game is meant to have no HUD.
+
+Build note: the project file format (110) requires **Xcode 27 beta** — prefix commands with
+`DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` and use an iOS 26.5 simulator
+destination such as `name=iPhone 17 Pro,OS=26.5`.

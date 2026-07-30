@@ -2,28 +2,32 @@
 //  SessionRepository.swift
 //  DeepDive
 //
+//  Single auto-saved slot in SwiftData. Also the bridge that makes the run reachable from
+//  outside the UI: App Intents run in the app's process and read/write the same store, so
+//  Siri/Shortcuts can talk to her without the app on screen.
 
 import Foundation
 import SwiftData
 
 @Model
-final class SavedSession {
-    var worldData: Data
-    var messagesData: Data
-    /// Bumped whenever the persisted shape changes; a mismatch discards the save rather than
-    /// resuming into a world that no longer matches it.
-    var schemaVersion: Int
+final class SavedGame {
+    /// The whole `GameSession`, JSON-encoded. One blob keeps SwiftData migrations trivial:
+    /// shape changes are handled by `schemaVersion`, not by the store's own schema.
+    var payload = Data()
+    /// Bumped whenever the persisted shape changes; a mismatch discards the save rather
+    /// than resuming into a state that no longer matches it.
+    var schemaVersion = SessionRepository.schemaVersion
 
-    init(worldData: Data, messagesData: Data, schemaVersion: Int = SessionRepository.schemaVersion) {
-        self.worldData = worldData
-        self.messagesData = messagesData
+    init(payload: Data, schemaVersion: Int = SessionRepository.schemaVersion) {
+        self.payload = payload
         self.schemaVersion = schemaVersion
     }
 }
 
-struct SessionRepository {
-    /// Raise this when `World` or the story changes enough that old saves are meaningless.
-    static let schemaVersion = 2
+nonisolated struct SessionRepository {
+    /// Raise this when `GameState`/`StoryMemory` or the story changes enough that old saves
+    /// are meaningless. v3: World → GameState + StoryMemory (the ARCHITECTURE.md refactor).
+    static let schemaVersion = 3
 
     private let modelContext: ModelContext
 
@@ -33,21 +37,19 @@ struct SessionRepository {
 
     /// Convenience initializer that owns a private, on-disk SwiftData store.
     init() throws {
-        let container = try ModelContainer(for: SavedSession.self)
+        let container = try ModelContainer(for: SavedGame.self)
         self.modelContext = ModelContext(container)
     }
 
     /// Upserts the single save slot — never accumulates multiple records.
     func save(_ session: GameSession) throws {
-        let worldData = try JSONEncoder().encode(session.world)
-        let messagesData = try JSONEncoder().encode(session.messages)
+        let payload = try JSONEncoder().encode(session)
 
         if let record = try existingRecord() {
-            record.worldData = worldData
-            record.messagesData = messagesData
+            record.payload = payload
             record.schemaVersion = Self.schemaVersion
         } else {
-            modelContext.insert(SavedSession(worldData: worldData, messagesData: messagesData))
+            modelContext.insert(SavedGame(payload: payload))
         }
         try modelContext.save()
     }
@@ -60,25 +62,22 @@ struct SessionRepository {
             try? delete()
             return nil
         }
-        guard
-            let world = try? JSONDecoder().decode(World.self, from: record.worldData),
-            let messages = try? JSONDecoder().decode([ChatMessage].self, from: record.messagesData)
-        else {
+        guard let session = try? JSONDecoder().decode(GameSession.self, from: record.payload) else {
             try? delete()
             return nil
         }
-        return GameSession(world: world, messages: messages)
+        return session
     }
 
     func delete() throws {
-        for record in try modelContext.fetch(FetchDescriptor<SavedSession>()) {
+        for record in try modelContext.fetch(FetchDescriptor<SavedGame>()) {
             modelContext.delete(record)
         }
         try modelContext.save()
     }
 
-    private func existingRecord() throws -> SavedSession? {
-        try modelContext.fetch(FetchDescriptor<SavedSession>()).first
+    private func existingRecord() throws -> SavedGame? {
+        try modelContext.fetch(FetchDescriptor<SavedGame>()).first
     }
 
     /// Whether there's a resumable run, for the menu's "continuar". Cheap enough to call on
@@ -86,6 +85,6 @@ struct SessionRepository {
     static func savedRunExists() -> Bool {
         guard let repository = try? SessionRepository() else { return false }
         guard let session = repository.load() else { return false }
-        return !session.world.isOver
+        return !session.state.isFinished
     }
 }

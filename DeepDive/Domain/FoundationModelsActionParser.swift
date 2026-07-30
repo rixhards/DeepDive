@@ -2,11 +2,15 @@
 //  FoundationModelsActionParser.swift
 //  DeepDive
 //
-//  Extracts a verb and a target from the player's free text. It never decides whether the
-//  action succeeds — that belongs to ActionResolver (ADR-002).
+//  Extracts a verb, a target and a tone from the player's free text. It never decides
+//  whether the action succeeds — that belongs to ActionResolver (ADR-002).
 //
 //  Two tiers: LocalActionParser handles common phrasings deterministically (and keeps the
 //  game playable without Apple Intelligence), the model handles everything else.
+//
+//  Context note: each parse gets a fresh, tiny session — instructions plus one line of
+//  player text — so the parser never accumulates transcript and can't hit the 4096-token
+//  window. The narrator is the one that needs beat-boundary session management.
 
 import Foundation
 import FoundationModels
@@ -16,15 +20,16 @@ struct InterpretedAction {
     @Guide(description: """
     The verb that best matches what the player wants the character to do. Use "look" for taking \
     in the whole place, "examine" for looking closely at one specific thing, "take" for picking \
-    something up, "use" for touching/knocking/opening/cutting/burning/lighting, "go" for moving \
-    somewhere, "wait" for deliberately doing nothing, "talk" for asking how she is or reassuring \
-    her, "inventory" for asking what she is carrying, and "unknown" when nothing fits.
+    something up, "use" for touching/opening/cutting/lighting, "knock" for knocking on a door, \
+    "burn" for setting something on fire, "go" for moving somewhere, "wait" for deliberately \
+    doing nothing, "talk" for asking how she is or reassuring her, "inventory" for asking what \
+    she is carrying, and "unknown" when nothing fits.
     """)
     var verb: String
 
     @Guide(description: """
     The thing the action is aimed at, in the player's own words, without articles. For example \
-    "porta de ferro", "feno", "pilares". Leave empty when the action has no specific target.
+    "porta de aço", "feno", "pilares". Leave empty when the action has no specific target.
     """)
     var target: String
 
@@ -36,8 +41,13 @@ struct InterpretedAction {
     """)
     var instrument: String
 
-    @Guide(description: "True when the player's message is hostile, cruel, or insulting toward the character.")
-    var isHostile: Bool
+    @Guide(description: """
+    The emotional tone of the player's message toward the character. \
+    Use "supportive" for encouragement, comfort, reassurance, or positive words. \
+    Use "distressing" for hostile, cruel, insulting, dismissive, or dark messages. \
+    Use "neutral" for instructions, questions, or anything that is neither supportive nor distressing.
+    """)
+    var tone: String
 }
 
 struct FoundationModelsActionParser: ActionParser {
@@ -55,8 +65,8 @@ struct FoundationModelsActionParser: ActionParser {
         return movementWords.contains { padded.contains(" \($0) ") }
     }
 
-    func parse(playerText: String, world: World) async -> PlayerAction {
-        if let local = LocalActionParser.parse(playerText, world: world) {
+    func parse(playerText: String, state: GameState) async -> PlayerAction {
+        if let local = LocalActionParser.parse(playerText, state: state) {
             return local
         }
 
@@ -66,18 +76,18 @@ struct FoundationModelsActionParser: ActionParser {
             return PlayerAction(verb: .unknown)
         }
 
-        let place = WorldMap.place(world.place)
-        let visible = place.features.flatMap(\.aliases).prefix(24).joined(separator: ", ")
-        let exits = place.exits.flatMap(\.aliases).prefix(16).joined(separator: ", ")
-        let carried = ItemID.allCases.filter { world.has($0) }.map(\.name).joined(separator: ", ")
+        let beat = WorldMap.beat(state.currentBeat)
+        let visible = beat.features.flatMap(\.aliases).prefix(24).joined(separator: ", ")
+        let exits = beat.exits.flatMap(\.aliases).prefix(16).joined(separator: ", ")
+        let carried = ItemID.allCases.filter { state.has($0) }.map(\.name).joined(separator: ", ")
 
         let instructions = """
         Você interpreta o que um jogador quer que uma personagem faça, num jogo de terror \
         narrativo em português do Brasil. O jogador escreve com as próprias palavras.
 
-        Extraia SOMENTE a tentativa: o verbo e o alvo. Nunca decida se a ação dá certo, nunca \
-        invente resultado, nunca mude o estado do jogo, e nunca assuma que a personagem tem um \
-        item que ela não tem.
+        Extraia SOMENTE a tentativa: o verbo, o alvo e o tom. Nunca decida se a ação dá certo, \
+        nunca invente resultado, nunca mude o estado do jogo, e nunca assuma que a personagem \
+        tem um item que ela não tem.
 
         Prefira uma interpretação razoável a responder "unknown". Só use "unknown" quando a \
         mensagem realmente não descrever nenhuma ação.
@@ -86,7 +96,7 @@ struct FoundationModelsActionParser: ActionParser {
         item pra usar (\"corta o feno com a faca\"), o alvo é \"feno\" e o instrumento é \"faca\".
 
         Contexto atual (só pra você reconhecer os alvos — não repita isso na resposta):
-        - Lugar: \(place.overview)
+        - Lugar: \(beat.overview)
         - Coisas visíveis: \(visible)
         - Saídas: \(exits)
         - A personagem carrega: \(carried.isEmpty ? "nada" : carried)
@@ -98,6 +108,7 @@ struct FoundationModelsActionParser: ActionParser {
             let response = try await session.respond(to: playerText, generating: InterpretedAction.self)
             let content = response.content
             let verb = Verb(rawValue: content.verb.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? .unknown
+            let tone = Tone(rawValue: content.tone.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) ?? .neutral
 
             // The model likes to helpfully fill in a tool she happens to be carrying, which
             // silently spends items the player never mentioned. Only honour an instrument the
@@ -122,14 +133,14 @@ struct FoundationModelsActionParser: ActionParser {
             // can walk her down the road.
             if verb == .go, !Self.mentionsMovement(spoken) {
                 print("FoundationModelsActionParser: refused to move on \"\(playerText)\" — no movement language in it")
-                return PlayerAction(verb: .unknown, isHostile: content.isHostile)
+                return PlayerAction(verb: .unknown, tone: tone)
             }
 
             return PlayerAction(
                 verb: verb,
                 target: content.target.isEmpty ? nil : content.target,
                 instrument: confirmedInstrument,
-                isHostile: content.isHostile
+                tone: tone
             )
         } catch {
             print("FoundationModelsActionParser: generation failed for \"\(playerText)\": \(error)")

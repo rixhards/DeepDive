@@ -46,6 +46,9 @@ struct MenuView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
+        // Ambient loop lives on the menu; starting a run silences it (GAME_SCOPE, Áudio).
+        .onAppear { AudioManager.shared.playAmbience() }
+        .onDisappear { AudioManager.shared.stop() }
     }
 
     private func menuLabel(_ title: String, prominent: Bool) -> some View {
