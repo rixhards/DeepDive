@@ -1,0 +1,46 @@
+{
+  "fill" : {
+    "solid" : "srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name" : "3-arches-near 2.svg",
+          "name" : "3-arches-near 2",
+          "opacity" : 0.8
+        },
+        {
+          "glass" : true,
+          "image-name" : "2-arches-far 2.svg",
+          "name" : "2-arches-far 2",
+          "opacity" : 0.7
+        },
+        {
+          "glass" : false,
+          "image-name" : "1-light 2.svg",
+          "name" : "1-light 2"
+        },
+        {
+          "image-name" : "0-background.svg",
+          "name" : "0-background"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
