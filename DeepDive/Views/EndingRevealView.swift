@@ -41,7 +41,7 @@ struct EndingRevealView: View {
                 Text(phrase)
                     .font(.system(size: 24, weight: .light, design: .serif))
                     .italic()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
                     .padding(.horizontal, 32)
@@ -53,11 +53,12 @@ struct EndingRevealView: View {
                 Button(action: onRestart) {
                     Text("recomeçar")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.accentLamp)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.optionBackground)
+                        .background(Theme.accentLamp.opacity(0.07))
                         .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Theme.accentLamp.opacity(0.45), lineWidth: 0.5))
                 }
 
                 if let onMenu {
@@ -67,7 +68,7 @@ struct EndingRevealView: View {
                             .foregroundStyle(Theme.timestampColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .overlay(Capsule().stroke(Theme.optionBackground, lineWidth: 1))
+                            .overlay(Capsule().stroke(Theme.hairline, lineWidth: 0.5))
                     }
                 }
             }

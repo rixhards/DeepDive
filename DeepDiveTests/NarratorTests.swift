@@ -100,6 +100,71 @@ final class NarratorTests: XCTestCase {
         XCTAssertEqual(FoundationModelsNarrator.stripRepeats(in: text, avoiding: "oi?"), text)
     }
 
+    // MARK: - Repetition window (spec 012)
+
+    /// The opening bug: comparing against only the last reply let a whole message from two
+    /// turns back come through untouched.
+    func testSentencesFromTwoRepliesBackAreDropped() {
+        let window = [
+            "oi? tem alguém aí? por favor me responde.",
+            "eu não sei onde eu tô. tô tão assustada.",
+        ]
+        let text = "oi? tem alguém aí? por favor me responde. tá tudo úmido e escuro aqui."
+        let result = FoundationModelsNarrator.stripRepeats(in: text, avoiding: window)
+        // "oi?" stays: short fragments are voice, not repetition. The two full sentences she
+        // already said two messages ago are what had to go.
+        XCTAssertFalse(result.contains("tem alguém aí"), "echoed from two replies back: \(result)")
+        XCTAssertFalse(result.contains("por favor me responde"), "echoed: \(result)")
+        XCTAssertTrue(result.contains("tá tudo úmido e escuro aqui."), "new content kept: \(result)")
+    }
+
+    /// Same input, one-entry window: this is what shipped before spec 012, and it is what the
+    /// player saw. Kept so the regression is visible rather than merely described.
+    func testSingleEntryWindowIsWhatLetTheEchoThrough() {
+        let text = "oi? tem alguém aí? por favor me responde. tá tudo úmido e escuro aqui."
+        let result = FoundationModelsNarrator.stripRepeats(
+            in: text,
+            avoiding: ["eu não sei onde eu tô. tô tão assustada."]
+        )
+        XCTAssertEqual(result, text, "with only the immediately previous reply, the echo survives")
+    }
+
+    func testWindowKeepsSentencesItHasNeverSeen() {
+        let window = ["oi? tem alguém aí?", "tá tudo úmido e escuro aqui."]
+        let text = "achei uma porta de aço com fechadura."
+        XCTAssertEqual(FoundationModelsNarrator.stripRepeats(in: text, avoiding: window), text)
+    }
+
+    func testEmptyWindowChangesNothing() {
+        let text = "tem uma chave no feno."
+        XCTAssertEqual(FoundationModelsNarrator.stripRepeats(in: text, avoiding: [String]()), text)
+    }
+
+    // MARK: - Substance guard (spec 012)
+
+    /// Observed on device after widening the window: the model echoed a whole previous
+    /// message, every real sentence was stripped, and the leftover "oi?" passed a guard that
+    /// only tested for emptiness — so she sent three bubbles that each said just "oi?".
+    func testLeftoverInterjectionDoesNotCountAsSomethingToSay() {
+        let stripped = FoundationModelsNarrator.stripRepeats(
+            in: "oi? tem alguém aí? por favor me responde.",
+            avoiding: ["oi? tem alguém aí? por favor me responde."]
+        )
+        XCTAssertEqual(stripped, "oi?", "only the voice tic survives")
+        XCTAssertFalse(
+            FoundationModelsNarrator.hasSubstance(stripped),
+            "so the narrator must fall back to the authored facts instead of sending it"
+        )
+    }
+
+    func testARealSentenceCountsAsSubstance() {
+        XCTAssertTrue(FoundationModelsNarrator.hasSubstance("tá tudo úmido e escuro aqui."))
+    }
+
+    func testEmptyTextHasNoSubstance() {
+        XCTAssertFalse(FoundationModelsNarrator.hasSubstance(""))
+    }
+
     // MARK: - FoundationModelsNarrator.clean(_:) defensive post-processing
 
     func testCleanStripsSurroundingQuotes() {

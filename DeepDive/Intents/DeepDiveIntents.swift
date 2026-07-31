@@ -64,7 +64,7 @@ enum GameTurnService {
                     beatSummary: WorldMap.beat(state.currentBeat).overview,
                     carrying: ItemID.allCases.filter { state.has($0) }.map(\.name),
                     memory: memory,
-                    previousReply: lines.last ?? ""
+                    recentReplies: Array(lines.suffix(NarrationRequest.repeatWindow))
                 ))
                 if !narrated.isEmpty { lines.append(narrated) }
             }

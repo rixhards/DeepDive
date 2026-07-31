@@ -23,11 +23,57 @@ final class ChatViewModel {
     private var hasStarted = false
     /// Player messages the ending still swallows in silence before the game closes.
     private var silentTurnsRemaining = 0
-    /// The last thing she said, so the narrator can avoid repeating it.
-    private var previousReply = ""
+    /// The last few things she said, oldest first, so the narrator can avoid repeating them.
+    /// One entry was not enough: during the opening the model echoed whole messages from two
+    /// turns back, which sailed past a filter that only knew the immediately previous reply.
+    private var recentReplies: [String] = []
 
-    /// Current sanity, for the debug meter only.
+    /// Current sanity. Never shown as a number (spec 010 removed the HUD) — the view reads
+    /// the derived values below instead.
     var currentSanity: Int { state.sanity }
+
+    // MARK: - Environmental degradation (spec 010)
+    //
+    // Sanity is communicated by how the screen feels, not by a meter. Every value here is
+    // derived from `state.sanity` — no new state — and interpolates continuously, so the
+    // player never catches a step at a threshold and reads it as a gauge.
+
+    /// How closed the vignette is, 0 (barely there) → 1 (pressing in).
+    var vignetteIntensity: Double {
+        Self.interpolate(sanity: state.sanity, stops: [(100, 0.06), (80, 0.16), (40, 0.46), (0, 0.86)])
+    }
+
+    /// Her bubbles lose contrast as she does. The player's never change — the player is fine.
+    var characterBubbleOpacity: Double {
+        Self.interpolate(sanity: state.sanity, stops: [(100, 1.0), (80, 1.0), (40, 0.85), (0, 0.72)])
+    }
+
+    /// Below 40 her words start drifting apart on the line.
+    var characterTracking: Double {
+        Self.interpolate(sanity: state.sanity, stops: [(100, 0), (40, 0), (0, 0.9)])
+    }
+
+    /// A cold cast over everything, only in the bottom band.
+    var coldVeilOpacity: Double {
+        Self.interpolate(sanity: state.sanity, stops: [(100, 0), (40, 0), (0, 0.20)])
+    }
+
+    /// Linear interpolation across sanity stops, highest sanity first. Values outside the
+    /// range clamp to the nearest stop.
+    private static func interpolate(sanity: Int, stops: [(sanity: Int, value: Double)]) -> Double {
+        let sanity = min(max(sanity, 0), 100)
+        guard let first = stops.first, let last = stops.last else { return 0 }
+        if sanity >= first.sanity { return first.value }
+        if sanity <= last.sanity { return last.value }
+
+        for (upper, lower) in zip(stops, stops.dropFirst()) where sanity <= upper.sanity && sanity >= lower.sanity {
+            let span = Double(upper.sanity - lower.sanity)
+            guard span > 0 else { return lower.value }
+            let progress = Double(sanity - lower.sanity) / span
+            return lower.value + (upper.value - lower.value) * progress
+        }
+        return last.value
+    }
 
     init(
         sessionRepository: SessionRepository? = try? SessionRepository(),
@@ -81,7 +127,7 @@ final class ChatViewModel {
         memory = StoryMemory.initial()
         messages = []
         silentTurnsRemaining = 0
-        previousReply = ""
+        recentReplies.removeAll()
         reachedEnding = nil
         isFinished = false
         isTyping = false
@@ -162,7 +208,7 @@ final class ChatViewModel {
         if !text.isEmpty {
             messages.append(ChatMessage(text: text, sender: .character, timestamp: Date()))
             everythingSaid.append(text)
-            previousReply = text
+            remember(text)
         }
 
         // A scene that plays itself out: no way for the player to interrupt.
@@ -175,7 +221,7 @@ final class ChatViewModel {
             if !beatText.isEmpty {
                 messages.append(ChatMessage(text: beatText, sender: .character, timestamp: Date()))
                 everythingSaid.append(beatText)
-                previousReply = beatText
+                remember(beatText)
             }
         }
 
@@ -200,8 +246,16 @@ final class ChatViewModel {
             beatSummary: WorldMap.beat(state.currentBeat).overview,
             carrying: ItemID.allCases.filter { state.has($0) }.map(\.name),
             memory: memory,
-            previousReply: previousReply
+            recentReplies: recentReplies
         ))
+    }
+
+    /// Keeps the dedup window at a fixed size, dropping the oldest reply as new ones land.
+    private func remember(_ reply: String) {
+        recentReplies.append(reply)
+        if recentReplies.count > NarrationRequest.repeatWindow {
+            recentReplies.removeFirst(recentReplies.count - NarrationRequest.repeatWindow)
+        }
     }
 
     /// Authored scenes (deaths, the madness, the escape) come through fast and on top of each

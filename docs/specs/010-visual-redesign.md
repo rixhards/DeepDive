@@ -1,7 +1,7 @@
 # Spec 010 — Redesign visual (camada de apresentação)
 
 ## Status
-`draft`
+`implemented`
 
 ## Contexto
 
@@ -31,24 +31,25 @@ numérico de sanidade por degradação ambiental, sem alterar nenhuma regra de j
 
 ## Critérios de Aceite
 
-- [ ] `Theme.playerBubble` não referencia mais `Color.accentColor`; usa um petróleo
+- [x] `Theme.playerBubble` não referencia mais `Color.accentColor`; usa um petróleo
       dessaturado definido explicitamente (`#2A3A42`).
-- [ ] `Theme` ganha `accentLamp` (`#E8A94B`), usado apenas em hairlines, botão primário e
+- [x] `Theme` ganha `accentLamp` (`#E8A94B`), usado apenas em hairlines, botão primário e
       no botão de enviar.
-- [ ] `Theme.background` deixa de ser `Color.black` chapado e passa a ser um gradiente
+- [x] `Theme.background` deixa de ser `Color.black` chapado e passa a ser um gradiente
       vertical sutil (`#06080A` → `#0E1114`).
-- [ ] O ponto verde de "online" foi removido do header do `ChatView`.
-- [ ] O header mostra uma segunda linha `"sem operadora · sem data"` abaixo de
+- [x] O ponto verde de "online" foi removido do header do `ChatView`.
+- [x] O header mostra uma segunda linha `"sem operadora · sem data"` abaixo de
       `"número desconhecido"`.
-- [ ] `DebugFlags.showSanityMeter` é `false` e `SanityMeterView` não é mais instanciado em
-      nenhuma tela.
-- [ ] Existe uma vinheta cuja intensidade deriva de `viewModel.currentSanity`: quanto menor
+- [x] `DebugFlags.showSanityMeter` é `false` e `SanityMeterView` não é mais instanciado em
+      nenhuma tela. *(Aplicada a nota técnica: ambos foram apagados por completo, já que nada
+      mais os referenciava.)*
+- [x] Existe uma vinheta cuja intensidade deriva de `viewModel.currentSanity`: quanto menor
       a sanidade, mais fechada a vinheta.
-- [ ] As bolhas da personagem perdem contraste conforme a sanidade cai; as do jogador não.
-- [ ] O timestamp aparece só na última mensagem de cada bloco consecutivo do mesmo
+- [x] As bolhas da personagem perdem contraste conforme a sanidade cai; as do jogador não.
+- [x] O timestamp aparece só na última mensagem de cada bloco consecutivo do mesmo
       remetente, não em toda bolha.
-- [ ] O `ComposerView` usa um campo com hairline inferior, não mais a pílula preenchida.
-- [ ] O app compila com
+- [x] O `ComposerView` usa um campo com hairline inferior, não mais a pílula preenchida.
+- [x] O app compila com
       `xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' build`.
 
 ## Comportamento Esperado
@@ -111,3 +112,4 @@ Figma: https://www.figma.com/design/qMp5g2M3itjtBeMAeyRjnm/Richas-Game
 | Data | Autor | Mudança |
 |------|-------|---------|
 | 2026-07-30 | Richard | Criação inicial a partir do redesign no Figma |
+| 2026-07-30 | Claude Code | Implementada. Todos os critérios de aceite atendidos; build e os 74 testes existentes passam (nenhum arquivo de engine tocado). **Nota:** o arquivo do Figma contém apenas a página `01 · iOS — Atual` — a página `02 · Redesign — Proposta` e o modo `Redesign` da coleção `DeepDive Tokens` não existem lá (a coleção só expõe os valores atuais, incl. `color/bubble/player: #007aff`). Os valores-alvo foram lidos do texto desta spec, que os define por extenso. Extra fora da lista de critérios, mas dentro da causa raiz descrita no Contexto: `Assets.xcassets/AccentColor.colorset` estava vazio e foi preenchido com `#E8A94B`, senão controles de sistema (os botões do `confirmationDialog`) continuariam azuis. Degradação implementada por interpolação contínua entre as faixas da tabela, não por degraus. Status → `implemented`. |

@@ -79,9 +79,12 @@ final class FoundationModelsNarrator: Narrator {
         }
 
         // Last line of defence against the thing that makes her feel like a bot: saying the
-        // same sentence again. If nothing survives deduplication, the authored facts do.
-        let deduped = Self.stripRepeats(in: cleaned, avoiding: request.previousReply)
-        guard !deduped.isEmpty else { return plain }
+        // same sentence again. If nothing of substance survives deduplication, the authored
+        // facts do. Emptiness alone was too weak a test: when the model echoed a whole
+        // previous message, every real sentence was stripped and the leftover interjection
+        // ("oi?") passed the guard, so she sent a bubble containing only that.
+        let deduped = Self.stripRepeats(in: cleaned, avoiding: request.recentReplies)
+        guard Self.hasSubstance(deduped) else { return plain }
         return String(deduped.prefix(400))
     }
 
@@ -301,9 +304,25 @@ final class FoundationModelsNarrator: Narrator {
     /// tends to bolt the same reassurance onto every message ("estou tão cansada e com
     /// medo"), which is what made her read as a loop instead of a person.
     ///
+    /// Below this, a sentence is a voice tic ("tá", "oi?", "meu deus") rather than content:
+    /// short enough that repeating it reads as a person, not as a loop.
+    private nonisolated static let fragmentKeyLength = 12
+
+    /// Whether anything longer than a voice tic survived. Used to decide if a deduplicated
+    /// reply still says something, or whether the authored facts should be sent instead.
+    nonisolated static func hasSubstance(_ text: String) -> Bool {
+        sentences(in: text).contains { key($0).count > fragmentKeyLength }
+    }
+
     /// Internal so it's testable: pure string logic, no model call.
     nonisolated static func stripRepeats(in text: String, avoiding previous: String) -> String {
-        let previousKeys = Set(sentences(in: previous).map(key))
+        stripRepeats(in: text, avoiding: [previous])
+    }
+
+    /// Comparing against only the last reply let the model echo a whole message from two
+    /// turns back — most visible in the opening, which delivers four messages in a row.
+    nonisolated static func stripRepeats(in text: String, avoiding previous: [String]) -> String {
+        let previousKeys = Set(previous.flatMap { sentences(in: $0) }.map(key))
         var seen: Set<String> = []
         var kept: [String] = []
 
@@ -312,7 +331,7 @@ final class FoundationModelsNarrator: Narrator {
             for sentence in sentences(in: line) {
                 let signature = key(sentence)
                 // Very short fragments ("tá", "meu deus") are voice, not repetition.
-                guard signature.count > 12 else {
+                guard signature.count > fragmentKeyLength else {
                     keptSentences.append(sentence)
                     continue
                 }

@@ -13,7 +13,7 @@ struct TypingIndicatorView: View {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { index in
                     Circle()
-                        .fill(Color.white.opacity(0.6))
+                        .fill(Theme.primaryText.opacity(0.5))
                         .frame(width: 6, height: 6)
                         .scaleEffect(isAnimating ? 1 : 0.5)
                         .animation(

@@ -14,11 +14,16 @@ struct MenuView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: 10) {
+            VStack(spacing: 16) {
                 Text("DEEPDIVE")
                     .font(.system(size: 40, weight: .light, design: .serif))
                     .tracking(10)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
+
+                // The one warm line on the screen: the lamp she's holding.
+                Rectangle()
+                    .fill(Theme.accentLamp.opacity(0.6))
+                    .frame(width: 56, height: 0.5)
 
                 Text("alguém está te mandando mensagem\nde um lugar que não devia existir")
                     .font(.footnote)
@@ -51,16 +56,20 @@ struct MenuView: View {
         .onDisappear { AudioManager.shared.stop() }
     }
 
+    /// The primary button is the only one that gets the lamp colour (spec 010).
     private func menuLabel(_ title: String, prominent: Bool) -> some View {
         Text(title)
             .font(.headline)
-            .foregroundStyle(prominent ? .white : Theme.timestampColor)
+            .foregroundStyle(prominent ? Theme.accentLamp : Theme.timestampColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(prominent ? Theme.optionBackground : .clear)
+            .background(prominent ? Theme.accentLamp.opacity(0.07) : .clear)
             .clipShape(Capsule())
             .overlay(
-                Capsule().stroke(Theme.optionBackground, lineWidth: prominent ? 0 : 1)
+                Capsule().stroke(
+                    prominent ? Theme.accentLamp.opacity(0.45) : Theme.hairline,
+                    lineWidth: 0.5
+                )
             )
     }
 }

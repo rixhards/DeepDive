@@ -87,10 +87,20 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
   xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' build
   xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' test
   ```
-- **Who tests what:** Richard tests on a **physical iPhone 16 (iOS 26.5)** — that's the only
-  place Apple Intelligence actually runs, so intent parsing and dynamic narration can only be
-  judged there. Agents **validate that it builds** and stop; do not launch the Simulator app or
-  ask him to check the Simulator. A Simulator *destination* is fine as a pure compile target.
+- **Who tests what:** Richard tests on a **physical iPhone 16 (iOS 26.5)** — that's where the
+  shipping experience is judged. Agents **validate that it builds** and stop by default; don't
+  ask him to go check the Simulator.
+- **Foundation Models *does* run in the Simulator** (verified 2026-07-31 on iPhone 17 Pro Max /
+  iOS 26.5: `com.apple.FoundationModels` active in the logs, no fallback). This file used to
+  claim the device was the only place the model ran — that was wrong, and it hid a real bug.
+  The opening-repetition bug in [spec 012](docs/specs/012-repetition-window.md) is invisible
+  with the authored fallback and only shows up with the model live. So when the thing under
+  test *is* narration, running it in the Simulator is legitimate and worth doing.
+  Useful there: `xcrun simctl io <udid> screenshot` for 1320×2868 captures, and the session
+  payload is plain JSON at
+  `$(xcrun simctl get_app_container <udid> com.gameChallenge.DeepDive data)/Library/Application Support/default.store`,
+  readable with `sqlite3 … "SELECT ZPAYLOAD FROM ZSAVEDGAME;"` — that makes narration checkable
+  by script instead of by eye. Note the run is only persisted after the player's first turn.
 - **Tests are not a deliverable here.** Write a test only when it's the only way *you* can
   verify something (e.g. engine logic unreachable in the shipped story). No broad suites —
   nobody reviews them. Keep model changes additive (optional fields with defaults) so existing
@@ -162,8 +172,15 @@ first; the key is in the hay). Three endings: **escape** (sanity variants: ≥80
 never model-generated (Foundation Models guardrails can refuse dark content).
 
 Ambient-audio infrastructure exists (`AudioManager`); drop `ambience.m4a`/`.mp3` into the
-bundle to hear it. Debug sanity meter is **on** (`DebugFlags.showSanityMeter`) — turn it off
-before shipping; the game is meant to have no HUD.
+bundle to hear it.
+
+**Presentation (spec 010):** the game has **no HUD** — `SanityMeterView` and `DebugFlags` are
+gone. Sanity is communicated environmentally: `ChatViewModel` derives `vignetteIntensity`,
+`characterBubbleOpacity`, `characterTracking` and `coldVeilOpacity` from `state.sanity`
+(continuous interpolation, animated over 1.8s so no threshold reads as a step), and the views
+just render them. `Theme` holds the palette as explicit hex — never `Color.accentColor`, which
+resolved to Apple's system blue. `Theme.accentLamp` is the only warm colour and is reserved
+for hairlines, the primary button and send.
 
 Build note: the project file format (110) requires **Xcode 27 beta** — prefix commands with
 `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` and use an iOS 26.5 simulator
