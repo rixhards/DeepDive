@@ -15,6 +15,7 @@
 | **Categoria principal** | Jogos → Aventura |
 | **Categoria secundária** | Jogos → Interpretação de papéis |
 | **Direitos autorais** | `2026 Richard Fagundes Rodrigues` |
+| **Content Rights** | **Não** contém nem acessa conteúdo de terceiros — tudo é original. Ratanabá é folclore de domínio público, não conteúdo licenciado |
 | **URL de suporte** | `https://rixhards.github.io/DeepDive/suporte.html` |
 | **URL de marketing** | `https://rixhards.github.io/DeepDive/` |
 | **URL da política de privacidade** | `https://rixhards.github.io/DeepDive/privacidade.html` |
@@ -162,6 +163,18 @@ dispositivo não contam como coleta nas regras da Apple.
 
 ---
 
+## 6b. App Review Information — o que NÃO preencher
+
+**Desmarque "Sign-in required".** Vem marcado e gera dois erros ("User name / Password — this
+field is required"). Esse bloco existe para apps que exigem login, onde o revisor precisa de
+uma conta de teste. O DeepDive não tem conta, cadastro nem login: o revisor abre e joga.
+Desmarcando, os campos somem e os erros também.
+
+**Contact Information é outra coisa e é obrigatório.** São *os seus* dados — nome, sobrenome,
+telefone e e-mail — para a Apple falar com você durante a análise. Não é publicado.
+
+---
+
 ## 7. Notas para o App Review
 
 > Cole no campo **"Notas"** da submissão. Escrito em inglês porque o time de review é global.
@@ -214,7 +227,11 @@ server, no analytics and no third-party SDK.
 
 - [ ] Nome `DeepDive: Mundo Esquecido` aceito (se já existir na loja, a Apple recusa e pede outro)
 - [ ] GitHub Pages ativo e as três URLs abrindo publicamente
-- [ ] Screenshots 6.9" enviadas
+- [ ] Screenshots enviadas — o App Store Connect pediu **6.5" (1242×2688)**, não 6.9". Ambos os conjuntos estão em `docs/app-store/screenshots/` (6.9" na raiz, 6.5" na subpasta)
+- [ ] Categoria principal definida (Jogos → Aventura)
+- [ ] Preço definido como gratuito em *Pricing and Availability*
+- [ ] Content Rights respondido em *App Information*
+- [ ] "Sign-in required" **desmarcado** em *App Review Information*
 - [ ] Classificação etária respondida conforme a seção 5
 - [ ] App Privacy respondido conforme a seção 6
 - [ ] Notas de review coladas conforme a seção 7
