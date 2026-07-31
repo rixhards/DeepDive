@@ -10,7 +10,7 @@
 
 | Campo | Valor |
 |---|---|
-| **Nome** (30) | `DeepDive: !Save Her` |
+| **Nome** (30) | `DeepDive: Mundo Esquecido` |
 | **Subtítulo** (30) | `Terror narrativo por mensagem` |
 | **Categoria principal** | Jogos → Aventura |
 | **Categoria secundária** | Jogos → Interpretação de papéis |
@@ -212,7 +212,7 @@ server, no analytics and no third-party SDK.
 
 ## 8. Checklist final antes de enviar
 
-- [ ] Nome `DeepDive: !Save Her` aceito (se já existir na loja, a Apple recusa e pede outro)
+- [ ] Nome `DeepDive: Mundo Esquecido` aceito (se já existir na loja, a Apple recusa e pede outro)
 - [ ] GitHub Pages ativo e as três URLs abrindo publicamente
 - [ ] Screenshots 6.9" enviadas
 - [ ] Classificação etária respondida conforme a seção 5

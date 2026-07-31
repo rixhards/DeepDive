@@ -46,9 +46,11 @@ Estado encontrado, com o que foi verificado e não apenas presumido:
    de conteúdo lenta.
 5. **Páginas hospedadas no próprio repositório** via GitHub Pages, em `docs/`, com `.nojekyll`.
    Zero custo e zero infraestrutura nova.
-6. **Screenshots pelo Simulator.** O `CLAUDE.md` proíbe o Simulator para *teste* — a regra
-   existe porque só o device roda Apple Intelligence. Gerar asset de loja é outro fim, e o
-   iPhone 16 do Richard (6.1") não produz o tamanho 6.9" que a Apple exige.
+6. **Screenshots pelo Simulator.** O iPhone 16 do Richard é 6.1" e não produz o tamanho 6.9"
+   (1320×2868) que a Apple exige; o iPhone 17 Pro Max do Simulator produz nativamente.
+   *Nota:* a justificativa original dizia que o Simulator era proibido porque só o device
+   rodava Apple Intelligence. Isso se provou falso durante este trabalho — ver
+   [spec 012](012-repetition-window.md).
 
 ## Critérios de Aceite
 
@@ -60,7 +62,8 @@ Estado encontrado, com o que foi verificado e não apenas presumido:
 - [x] Nome, subtítulo, keywords, texto promocional e descrição dentro dos limites, verificados por contagem
 - [x] Gabarito da classificação etária e das respostas de App Privacy escritos
 - [x] Notas para o App Review escritas, incluindo caminho rápido até um final
-- [ ] Screenshots 6.9" (1320×2868) capturadas
+- [x] Screenshots 6.9" (1320×2868) capturadas — em `docs/app-store/screenshots/`
+- [ ] GitHub Pages ativo, com as três URLs respondendo 200
 - [ ] Certificado Apple Distribution criado
 - [ ] Build enviado e submetido
 
@@ -69,7 +72,7 @@ Estado encontrado, com o que foi verificado e não apenas presumido:
 - **Aparelho sem Apple Intelligence:** verificado — o jogo permanece completo, com todos os
   caminhos e finais. Documentado nas notas de review para o revisor não confundir a
   narração autoral com bug.
-- **Nome já registrado:** `DeepDive: !Save Her` pode colidir. Se a Apple recusar, só o campo
+- **Nome já registrado:** `DeepDive: Mundo Esquecido` pode colidir. Se a Apple recusar, só o campo
   de nome muda; a descrição não depende dele.
 - **Guardrails do Foundation Models:** cenas de morte, loucura e fuga são scripts fixos
   entregues literalmente, justamente para o modelo nunca poder recusar um final.
