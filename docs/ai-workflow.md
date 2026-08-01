@@ -79,9 +79,9 @@ kept for future-you.
   **(not used yet.)** We're keeping the setup minimal and hand-made so it's understandable.
 
 This list is about *development-tooling* concepts (how Claude Code/Antigravity work), not
-the shipped app's own AI feature. The game's runtime AI (`IntentParser` + `Narrator`, both
-Foundation Models, Specs 006–007) **is** implemented — see `docs/architecture.md`'s "AI /
-Agents" section — and is a separate concern from the list above.
+the shipped app's own AI feature. The game's runtime AI (`ActionParser` + `Narrator`, both
+Foundation Models, Specs 006–007) **is** implemented — see `ARCHITECTURE.md` — and is a
+separate concern from the list above.
 
 ## Corrections to the class notes (`ai-assisted-development-guide.md`)
 

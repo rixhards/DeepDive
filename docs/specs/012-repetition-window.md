@@ -1,7 +1,7 @@
 # Spec 012 — Janela de repetição da narradora
 
 ## Status
-`approved`
+`implemented`
 
 ## Contexto
 

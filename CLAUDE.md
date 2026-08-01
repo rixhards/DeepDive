@@ -60,7 +60,7 @@ do not silently guess scope.
 | Persistence | SwiftData, single auto-saved session slot |
 | Runtime AI | Foundation Models — `ActionParser` (free text → verb + target) + `Narrator` (facts → in-character prose). `LocalActionParser` handles common phrasings with no AI, so the game runs in the Simulator too |
 
-Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
+Details and diagrams: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Language rule
 
@@ -85,7 +85,6 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
   name must match an installed runtime (e.g. `iPhone 17`, not `iPhone 15`, on newer Xcode).
   ```bash
   xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' build
-  xcodebuild -project DeepDive.xcodeproj -scheme DeepDive -destination 'platform=iOS Simulator,name=iPhone 17' test
   ```
 - **Who tests what:** Richard tests on a **physical iPhone 16 (iOS 26.5)** — that's where the
   shipping experience is judged. Agents **validate that it builds** and stop by default; don't
@@ -101,10 +100,11 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
   `$(xcrun simctl get_app_container <udid> com.gameChallenge.DeepDive data)/Library/Application Support/default.store`,
   readable with `sqlite3 … "SELECT ZPAYLOAD FROM ZSAVEDGAME;"` — that makes narration checkable
   by script instead of by eye. Note the run is only persisted after the player's first turn.
-- **Tests are not a deliverable here.** Write a test only when it's the only way *you* can
-  verify something (e.g. engine logic unreachable in the shipped story). No broad suites —
-  nobody reviews them. Keep model changes additive (optional fields with defaults) so existing
-  tests keep compiling.
+- **There is no test target.** `DeepDiveTests` was removed on 2026-08-01 along with its
+  `.pbxproj` target and scheme entry — the suite had grown to 908 lines nobody read, and the
+  policy here has always been that tests aren't a deliverable. `xcodebuild … test` therefore
+  fails by design; build is the check. If you ever need to verify engine logic that's
+  unreachable by playing, add the target back deliberately rather than assuming it exists.
 
 ## Who does what
 
@@ -116,7 +116,8 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 ## Where things live
 
 - `docs/vision.md` — product vision
-- `docs/architecture.md` — technical architecture & data flow
+- `ARCHITECTURE.md` — technical architecture & data flow
+- `GAME_SCOPE.md` — narrative scope: scenes, items, mechanics, endings
 - `docs/ai-workflow.md` — **how this project uses AI** (specs, skills, subagents, MCP…) — read if unsure how any of this works
 - `docs/specs/` — specs (the SDD contracts); `_template.md` to start a new one
 - `docs/adr/` — architecture decision records
@@ -128,8 +129,7 @@ Details and diagrams: [`docs/architecture.md`](docs/architecture.md).
 
 **The scope-reduction refactor is done.** Its sources of truth live at the repo root:
 `ARCHITECTURE.md` (stack, state shape, Foundation Models context strategy, App Intents) and
-`GAME_SCOPE.md` (scenes, items, mechanics, endings); `REFACTOR_INSTRUCTIONS.md` translated
-both into the implementation.
+`GAME_SCOPE.md` (scenes, items, mechanics, endings).
 
 The loop is: player text → `ActionParser` extracts a **verb + target + tone** →
 `ActionResolver` decides the outcome against `GameState` → `Narrator` says it in her voice.

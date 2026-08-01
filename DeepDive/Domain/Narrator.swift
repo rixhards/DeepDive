@@ -44,14 +44,10 @@ nonisolated struct NarrationRequest: Sendable {
     }
 }
 
+/// `FoundationModelsNarrator` is the only implementation, and the default `ChatViewModel`
+/// takes. The protocol stays because narration has to be injectable: the facts it receives
+/// are already valid pt-BR, so anything that needs a deterministic voice can supply one
+/// without the model in the loop.
 protocol Narrator {
     func narrate(_ request: NarrationRequest) async -> String
-}
-
-/// Returns the facts unchanged. Safe compile-time fallback and the default in tests — the
-/// authored facts are already valid pt-BR on their own.
-struct StaticNarrator: Narrator {
-    func narrate(_ request: NarrationRequest) async -> String {
-        request.facts.joined(separator: " ")
-    }
 }

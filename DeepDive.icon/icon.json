@@ -7,20 +7,20 @@
       "layers" : [
         {
           "glass" : false,
-          "image-name" : "3-arches-near 2.svg",
-          "name" : "3-arches-near 2",
+          "image-name" : "3-arches-near.svg",
+          "name" : "3-arches-near",
           "opacity" : 0.8
         },
         {
           "glass" : true,
-          "image-name" : "2-arches-far 2.svg",
-          "name" : "2-arches-far 2",
+          "image-name" : "2-arches-far.svg",
+          "name" : "2-arches-far",
           "opacity" : 0.7
         },
         {
           "glass" : false,
-          "image-name" : "1-light 2.svg",
-          "name" : "1-light 2"
+          "image-name" : "1-light.svg",
+          "name" : "1-light"
         },
         {
           "image-name" : "0-background.svg",
