@@ -40,64 +40,74 @@ reached and start over.
 
 ## Acceptance Criteria
 
+> **Superseded — marked `[~]`, not `[x]`.** Every criterion below was verified and checked off
+> against the JSON-dialog-tree architecture (`StoryOption`, `StoryNode`, `nextNodeID`,
+> `responseText`, `EngineResponse`, `rawNarration`, `story.json`). [ADR-002](../adr/ADR-002-world-simulation-in-swift.md)
+> replaced that architecture with a Swift world model, and none of those types exist in the
+> codebase anymore (zero occurrences under `*.swift`). A checked box asserts something is true
+> of the *current* code; these were true of a system that no longer exists, so `[x]` would be a
+> false claim today. The spec's intent (stay-in-place actions, multi-beat sequences, ending
+> identity, terminal-trap detection, restart) carries over and is implemented by
+> `ActionResolver` / `WorldMap` / `TurnRunner` instead.
+
 ### Stay-in-place actions
 
-- [x] `StoryOption.nextNodeID` becomes optional. An option with no `nextNodeID` must carry
+- [~] `StoryOption.nextNodeID` becomes optional. An option with no `nextNodeID` must carry
   `responseText`; the engine replies with it and **leaves `currentNodeID` unchanged**.
-- [x] Exactly one of `nextNodeID` / `responseText` is present on every option; a node that
+- [~] Exactly one of `nextNodeID` / `responseText` is present on every option; a node that
   violates this fails validation at engine init with a clear error.
-- [x] A stay-in-place option still applies its `effects` and is still filtered by its
+- [~] A stay-in-place option still applies its `effects` and is still filtered by its
   `conditions`, exactly like a moving option.
-- [x] After a stay-in-place option, the node's full option set is offered again (minus anything
+- [~] After a stay-in-place option, the node's full option set is offered again (minus anything
   its effects just gated out) — the player can keep acting in the same place.
-- [x] The response is narrated normally (subject to `rawNarration`), and the typing delay scales
+- [~] The response is narrated normally (subject to `rawNarration`), and the typing delay scales
   to it as usual.
 
 ### Multi-beat sequences
 
-- [x] `StoryNode.beats: [String]` (default `[]`) holds extra messages delivered **after**
+- [~] `StoryNode.beats: [String]` (default `[]`) holds extra messages delivered **after**
   `characterText`, in order, each as its own chat message with its own typing delay.
-- [x] No player input is accepted while beats are being delivered; the composer is disabled and
+- [~] No player input is accepted while beats are being delivered; the composer is disabled and
   the typing indicator runs between them.
-- [x] A node with `beats` and no options plays its sequence and then ends the game — this is how
+- [~] A node with `beats` and no options plays its sequence and then ends the game — this is how
   the infinite corridor and the water creature resolve.
-- [x] Beats respect `rawNarration` and `silentTurns` on their node.
+- [~] Beats respect `rawNarration` and `silentTurns` on their node.
 
 ### Ending identity
 
-- [x] `StoryNode.ending: String?` names which of the three endings a terminal node resolves to
+- [~] `StoryNode.ending: String?` names which of the three endings a terminal node resolves to
   (`escape`, `surrender`, `taken`).
-- [x] **Any number of terminal nodes may share an ending id.** `taken` is explicitly a wildcard
+- [~] **Any number of terminal nodes may share an ending id.** `taken` is explicitly a wildcard
   for alternative deaths (fire, asphyxiation, the corridor, the water) that need no lore of
   their own. This revises spec 008's "exactly three terminal nodes" criterion — the invariant is
   now *exactly three ending identities*.
 - [~] Every terminal node declares an `ending`; a terminal node without one **logs a warning** rather than failing validation — a hard throw would break every test fixture that builds a throwaway terminal node, which the General criterion forbids. The shipped story is enforced by the lint script instead.
-- [x] `EngineResponse` exposes the reached ending so the UI can name it.
+- [~] `EngineResponse` exposes the reached ending so the UI can name it.
 
 ### Terminal-trap detection
 
-- [x] A node is terminal because it has **no authored options**, not because its options were
+- [~] A node is terminal because it has **no authored options**, not because its options were
   all gated out by conditions.
-- [x] If a node has authored options but none pass their conditions, the engine logs a loud
+- [~] If a node has authored options but none pass their conditions, the engine logs a loud
   authoring error and ends the game gracefully rather than hanging.
-- [x] A validation pass over `story.json` reports any node whose options are *all* conditional
+- [~] A validation pass over `story.json` reports any node whose options are *all* conditional
   (no unconditional escape) — a dead-end risk once loops exist.
 
 ### Restart
 
-- [x] When the game ends, the chat shows which ending was reached and a **"recomeçar"** control.
-- [x] "Recomeçar" resets engine state, clears the messages, deletes any saved session, and starts
+- [~] When the game ends, the chat shows which ending was reached and a **"recomeçar"** control.
+- [~] "Recomeçar" resets engine state, clears the messages, deletes any saved session, and starts
   a fresh run without relaunching the app.
-- [x] The ending reveal does not appear mid-game, and does not appear during
+- [~] The ending reveal does not appear mid-game, and does not appear during
   `node_end_taken`'s silent turns — only once the run is genuinely over.
-- [x] "Voltar ao menu" is **out of scope** here: there is no menu yet. It lands in spec 010
+- [~] "Voltar ao menu" is **out of scope** here: there is no menu yet. It lands in spec 010
   alongside the menu itself.
 
 ### General
 
-- [x] All new fields are optional with defaults, so existing `story.json`, the spec-004 fixture,
+- [~] All new fields are optional with defaults, so existing `story.json`, the spec-004 fixture,
   and existing tests decode and pass unchanged.
-- [x] No new Swift Package dependencies.
+- [~] No new Swift Package dependencies.
 
 ## Expected Behavior
 

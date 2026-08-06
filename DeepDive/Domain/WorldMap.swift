@@ -403,6 +403,45 @@ nonisolated enum WorldMap {
         }
     }
 
+    // MARK: - Saudação, recusa e incerteza (spec 013)
+
+    /// When the player just says hello, or acknowledges her. She opens the game asking whether
+    /// anyone is there; answering "oi" used to get "eu não entendi o que é pra eu fazer".
+    static let greetingLines = [
+        "oi. oi, meu deus, você respondeu mesmo. eu tinha certeza que ninguém ia responder.",
+        "você continua aí. tá bom. isso já ajuda mais do que você imagina.",
+        "oi de novo. desculpa ficar checando — eu só preciso saber que você não sumiu.",
+        "tá. eu tô aqui e eu tô te ouvindo. me diz o que fazer que eu faço.",
+    ]
+
+    /// The player told her *not* to do something, and there was nothing pending to drop.
+    static let prohibitionLines = [
+        "tá bom, não faço. me diz o que você quer que eu faça então.",
+        "beleza, eu não encosto nisso. o que a gente tenta em vez disso?",
+        "entendi, deixo quieto. me manda outra coisa.",
+    ]
+
+    /// She couldn't place what she was being asked to act on. She asks instead of acting —
+    /// an instruction she didn't understand must never cost her anything.
+    static let unclearActionLines = [
+        "fazer isso com o quê? me explica melhor que eu tento.",
+        "eu não entendi em que você quer que eu mexa. me diz o nome da coisa?",
+        "eu fiquei com a mão no ar aqui. mexer em quê?",
+    ]
+
+    /// Reaching for something that isn't within reach.
+    static let nothingToTouchLines = [
+        "eu estiquei a mão e não tem nada aí. o que era pra eu tocar?",
+        "não tem nada assim ao meu alcance. me diz o que é que eu procuro.",
+    ]
+
+    /// Searching for something the place doesn't have.
+    static let foundNothingLines = [
+        "eu procurei e não achei nada disso aqui, não.",
+        "eu vasculhei o que dava e não tem nada assim por perto.",
+        "procurei bem. não tem.",
+    ]
+
     // MARK: - Ending screens (original phrases, one per ending)
 
     /// Tone: legends of Ratanabá and lost cities. Original writing, no quotation.

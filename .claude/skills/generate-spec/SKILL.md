@@ -20,7 +20,8 @@ implementation.
    (zero-padded, e.g. `002`). Slug = kebab-case feature name (e.g. `game-engine`).
 3. **Gather context** so the spec aligns with the project:
    - `docs/vision.md` — is this in scope? (Check the "Out of Scope" list.)
-   - `ARCHITECTURE.md` — which layer does it touch?
+   - `CLAUDE.md`'s "Current status" section and [ADR-002](../../../docs/adr/ADR-002-world-simulation-in-swift.md) — which layer does it touch?
+     (`docs/historical/ARCHITECTURE.md` is a pre-implementation brief, not current.)
    - Existing specs in `docs/specs/` — keep style and dependencies consistent.
 4. **Write the spec**, filling every section:
    - **Status:** `draft`.

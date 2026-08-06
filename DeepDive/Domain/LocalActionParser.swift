@@ -19,7 +19,15 @@ nonisolated enum LocalActionParser {
     /// Order matters twice over: the earliest match in the sentence wins, and ties go to
     /// whichever verb is listed first here. So specific phrasings come before generic ones.
     /// Split in three so the type-checker doesn't choke on one giant literal.
-    private static let verbCues: [(Verb, [String])] = answerCues + senseCues + actionCues
+    private static let verbCues: [(Verb, [String])] = answerCues + greetCues + senseCues + actionCues
+
+    /// Words that turn the clause after them into a prohibition. Deliberately **not** cues of
+    /// the verb `.no`: reading a bare "não" as the verb made "não tenha medo, eu tô aqui"
+    /// cancel whatever she was standing at the edge of (spec 013).
+    private static let bareNegators: Set<String> = ["nao", "nunca", "jamais", "nem"]
+
+    /// How many words may sit between a negator and the verb it negates.
+    private static let negationReach = 3
 
     private static let answerCues: [(Verb, [String])] = [
         // Answers to a question she asked. Listed before .wait/.no-alikes that share words.
@@ -29,9 +37,19 @@ nonisolated enum LocalActionParser {
         (.yes, ["sim", "isso", "pode ir", "pode sim", "vai fundo", "manda ver", "com certeza",
                 "claro", "aham", "uhum", "faz isso", "faca isso", "confirma", "confirmo",
                 "pode entrar", "pode abrir", "entra sim", "vai sim", "tenho certeza"]),
-        (.no, ["nao", "melhor nao", "pare", "deixa", "deixe", "esquece", "esqueca",
+        // Bare "nao"/"nunca" are handled by the negation pass, not here — otherwise they win
+        // on position and swallow the verb they were modifying.
+        (.no, ["melhor nao", "pare", "deixa", "deixe", "esquece", "esqueca",
                "cancela", "cancele", "recua", "desiste", "nem pensar", "de jeito nenhum"]),
 
+    ]
+
+    /// Hello, and "ok/beleza/entendi". She opens the game with "oi? tem alguém aí?" — the
+    /// player answering "oi" used to get "eu não entendi o que é pra eu fazer".
+    private static let greetCues: [(Verb, [String])] = [
+        (.greet, ["oi", "ola", "opa", "eae", "e ai", "fala", "alo", "bom dia", "boa tarde",
+                  "boa noite", "ok", "okay", "ta bom", "tudo bem entao", "beleza", "blz",
+                  "entendi", "certo", "ta certo", "valeu", "obrigado", "obrigada", "tranquilo"]),
     ]
 
     private static let senseCues: [(Verb, [String])] = [
@@ -43,7 +61,11 @@ nonisolated enum LocalActionParser {
                 "que horas sao", "voce esta ferida", "voce ta ferida", "voce se machucou",
                 "tem mais alguem", "voce esta sozinha", "voce ta sozinha", "tem alguem com voce",
                 "voce me conhece", "voce sabe quem eu sou", "por que eu", "voce sabe onde ta",
-                "voce faz ideia"]),
+                "voce faz ideia",
+                // The player asking for direction. Common in the first minute, and it used to
+                // fall through to "eu não entendi" (spec 013).
+                "o que eu faco", "o que eu devo fazer", "o que fazer", "e agora", "me ajuda",
+                "alguma ideia", "o que voce acha", "o que a gente faz", "por onde comeco"]),
 
         (.inventory, ["o que voce tem", "o que vc tem", "que itens", "seu inventario", "inventario",
                       "o que ta carregando", "o que voce carrega", "o que tem contigo",
@@ -75,11 +97,22 @@ nonisolated enum LocalActionParser {
                  "descreve o ambiente", "descreva o ambiente", "descreve o lugar", "descreva o lugar",
                  "descreve seus arredores", "descreva seus arredores", "descreve o que ve",
                  "descreva o que ve", "o que voce ve", "o que vc ve", "onde voce esta", "onde vc ta",
-                 "onde voce ta", "como e o lugar", "me descreve", "me descreva", "da uma olhada em volta"]),
+                 "onde voce ta", "como e o lugar", "me descreve", "me descreva", "da uma olhada em volta",
+                 // Phrasings the support page teaches but the parser never knew (spec 013).
+                 "o que voce ta vendo", "o que vc ta vendo", "o que ta vendo", "o que voce esta vendo",
+                 "o que voce enxerga", "o que tem ai", "o que tem aqui", "o que tem em volta",
+                 "me diz o que tem", "me diz o que voce ve", "o que voce consegue ver"]),
 
         (.examine, ["examina", "examine", "observa", "observe", "repara", "repare", "inspeciona",
                     "inspecione", "analisa", "analise", "da uma olhada", "de uma olhada",
                     "descreve", "descreva", "ve o", "ve a", "olha", "olhe"]),
+
+        // Searching is its own act: "olha pro feno" describes it, "revira o feno" digs in it.
+        // These used to live in `.use`, which is how "procura uma saída" reached the
+        // touch-the-scenery fallback and put her hand in the water (spec 013).
+        (.search, ["procura", "procure", "vasculha", "vasculhe", "cava", "cave",
+                   "revira", "revire", "remexe", "remexa", "da uma procurada", "ve se tem",
+                   "olha se tem", "fuca", "fuce"]),
 
         // Knocking must beat the generic "use" cues: it's the difference between surviving
         // the hay room and not.
@@ -92,13 +125,17 @@ nonisolated enum LocalActionParser {
         (.take, ["pega", "pegue", "recolhe", "recolha", "guarda", "guarde", "apanha", "apanhe",
                  "leva", "leve", "tira", "tire"]),
 
-        (.use, ["usa", "use", "utiliza", "utilize", "toca", "toque", "encosta", "encoste",
+        (.use, ["usa", "use", "utiliza", "utilize",
                 "abre", "abra", "abrir", "empurra", "empurre", "puxa", "puxe",
                 "forca", "force", "corta", "corte", "acende", "acenda",
-                "apaga", "apague", "enfia", "enfie", "mexe", "mexa", "revira", "revire",
+                "apaga", "apague", "enfia", "enfie", "mexe", "mexa",
                 "destranca", "destranque", "arromba", "arrombe",
-                "joga", "jogue", "atira", "encaixa", "encaixe", "gira", "gire", "tenta abrir",
-                "procura", "procure", "vasculha", "vasculhe", "cava", "cave"]),
+                "joga", "jogue", "atira", "encaixa", "encaixe", "gira", "gire", "tenta abrir"]),
+
+        // Listed after `.burn` on purpose: "toca fogo no feno" must stay a burn, and a cue that
+        // starts the sentence wins outright, so burn has to be consulted first.
+        (.touch, ["toca", "toque", "encosta", "encoste", "apalpa", "tateia", "poe a mao",
+                  "bota a mao", "passa a mao", "sente a textura"]),
 
         (.go, ["vai", "va", "anda", "ande", "caminha", "caminhe", "segue", "siga", "segue em frente",
                "siga em frente", "entra", "entre", "atravessa", "atravesse", "sobe", "suba",
@@ -130,17 +167,32 @@ nonisolated enum LocalActionParser {
         "to aqui", "to contigo", "estou aqui", "estou contigo", "nao te abandono",
         "confia em mim", "conta comigo", "voce e forte", "coragem", "forca",
         "nao desiste", "eu te ajudo", "vou te tirar dai", "aguenta firme", "tenho orgulho",
+        // Reassurance phrased as a negation. These are the warmest things a player types, and
+        // every one of them used to read as hostility because the distressing cue matched as a
+        // bare substring inside them (spec 013).
+        "nao desisto", "nao vou desistir", "nao te deixo", "nao vou te deixar",
+        "nao vou embora", "nao vou sumir", "nao vou te abandonar", "nao te largo",
+        "nao tenha medo", "nao precisa ter medo", "nao se preocupa", "nao se preocupe",
+        "nao se desespera", "nao se desespere", "nao chora", "nao vai morrer", "nao morre",
+        "nao vou parar", "nao desista", "vou ficar aqui", "fico aqui", "to do seu lado",
     ]
 
-    /// Splits a message into the acts it actually contains, in order. Conservative on
-    /// purpose: it only splits when *every* part carries an action verb of its own, so
-    /// "não sei quem é você, não ligo" stays one message while "pega a faca e vai pela
-    /// água" becomes two.
+    /// Splits a message into the acts it actually contains, in order.
+    ///
+    /// Punctuation counts. In Portuguese the comfort comes first and is separated by a comma —
+    /// "calma, pega a faca" — so while `,` and `.` weren't separators, the comfort cue won on
+    /// position and the instruction next to it was thrown away (spec 013).
+    ///
+    /// It is also no longer all-or-nothing: parts that don't carry a verb are dropped, as long
+    /// as at least one part does. Requiring *every* part to be actionable meant one unparsed
+    /// fragment vetoed the whole split and silently killed the instruction beside it.
     static func splitClauses(_ playerText: String) -> [String] {
         let whole = [playerText]
         // Longest first, so " e depois " never splits as " e " leaving a stray "depois".
+        // Punctuation goes last: single characters can't collide with the phrases above.
         let separators = [" e depois ", " e daí ", " e aí ", " depois disso ", ", depois ",
-                          " depois ", " então ", " em seguida ", " e logo ", " e ", "; ", " após "]
+                          " depois ", " então ", " em seguida ", " e logo ", " e ", "; ", " após ",
+                          ", ", ". ", "! ", "? ", ",", ".", "!", "?"]
 
         // Separators are matched on the original string with folding options, so the indices
         // are the player's own — no offset arithmetic between two different strings.
@@ -168,13 +220,16 @@ nonisolated enum LocalActionParser {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        // Every part must stand on its own as an instruction, and none of them may be a
-        // bare yes/no — "sim e pode ir" is one answer, not two acts.
-        let allActionable = trimmed.allSatisfy { part in
+        // Keep the parts that stand on their own as an instruction. A bare yes/no is not an
+        // act — "sim e pode ir" is one answer, not two — so those don't count either.
+        let actionable = trimmed.filter { part in
             guard let verb = parse(part, state: GameState())?.verb else { return false }
             return ![.unknown, .yes, .no].contains(verb)
         }
-        return trimmed.count > 1 && allActionable ? trimmed : whole
+        // Nothing survived: hand the whole message over so the single-clause path (and the
+        // model behind it) still gets its shot.
+        guard !actionable.isEmpty else { return whole }
+        return actionable.count > 1 ? actionable : whole
     }
 
     static func parse(_ playerText: String, state: GameState) -> PlayerAction? {
@@ -188,12 +243,20 @@ nonisolated enum LocalActionParser {
 
         // Padding lets every lookup below demand whole words on both sides.
         let padded = " \(text) "
-        let tone = classifyTone(padded: padded, text: text)
+        let tone = classifyTone(padded: padded)
 
         guard let match = firstVerb(in: padded) else {
-            // A pure emotional message with no verb is still a readable act.
-            return tone == .neutral ? nil : PlayerAction(verb: .talk, tone: tone)
+            // A pure emotional message with no verb is still a readable act. This is checked
+            // before the bare-negator fallback below, so "não desisto de você" lands as comfort
+            // rather than as a refusal.
+            if tone != .neutral { return PlayerAction(verb: .talk, tone: tone) }
+            // Nothing but a negation: that really is an answer of "no".
+            if firstNegator(in: padded) != nil { return PlayerAction(verb: .no, tone: tone) }
+            return nil
         }
+
+        // "não entra na água" is the verb `.go` that she must NOT perform — not the verb `.no`.
+        let isProhibition = negatorPrecedes(padded, match.range)
 
         let remainder = String(padded[match.range.upperBound...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -226,18 +289,58 @@ nonisolated enum LocalActionParser {
             verb: match.verb,
             target: target?.isEmpty == true ? nil : target,
             instrument: instrument,
-            tone: tone
+            tone: tone,
+            isProhibition: isProhibition
         )
     }
 
-    private static func classifyTone(padded: String, text: String) -> Tone {
-        if distressingCues.contains(where: { padded.contains(" \($0.folded) ") || text.contains($0.folded) }) {
-            return .distressing
-        }
-        if supportiveCues.contains(where: { padded.contains(" \($0.folded) ") || text.contains($0.folded) }) {
-            return .supportive
-        }
+    /// The tone of a whole message, read once. `TurnRunner` uses this so a message split into
+    /// clauses is charged for how it lands exactly once, on the message, not per clause.
+    static func messageTone(of playerText: String) -> Tone {
+        let text = playerText.folded
+            .replacingOccurrences(of: "[^a-z0-9 ]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return .neutral }
+        return classifyTone(padded: " \(text) ")
+    }
+
+    /// Whole-word only, and negation-aware. The old version also accepted a bare substring
+    /// match, so "desisto" fired inside "não desisto de você" and a promise never to give up
+    /// on her cost sanity and counted toward the abandonment death (spec 013).
+    private static func classifyTone(padded: String) -> Tone {
+        // A negated hostile phrase is not hostile. Checked first so "não vou embora" can't be
+        // read as "vou embora".
+        if matches(distressingCues, in: padded, ignoringNegated: true) { return .distressing }
+        if matches(supportiveCues, in: padded, ignoringNegated: false) { return .supportive }
         return .neutral
+    }
+
+    /// Whether any cue occurs as a whole word. When `ignoringNegated` is on, an occurrence
+    /// preceded by "não"/"nunca"/"jamais" doesn't count.
+    private static func matches(_ cues: [String], in padded: String, ignoringNegated: Bool) -> Bool {
+        cues.contains { cue in
+            guard let range = padded.range(of: " \(cue.folded) ") else { return false }
+            guard ignoringNegated else { return true }
+            let inner = padded.index(after: range.lowerBound)..<range.upperBound
+            return !negatorPrecedes(padded, inner)
+        }
+    }
+
+    /// Position of the first bare negator, if the text has one.
+    private static func firstNegator(in padded: String) -> Range<String.Index>? {
+        bareNegators
+            .compactMap { padded.range(of: " \($0) ") }
+            .min { $0.lowerBound < $1.lowerBound }
+    }
+
+    /// Is there a "não"/"nunca"/"jamais" close enough before `range` to be negating it?
+    /// Bounded by `negationReach` words so a negation early in a long sentence doesn't reach
+    /// across the whole thing.
+    private static func negatorPrecedes(_ padded: String, _ range: Range<String.Index>) -> Bool {
+        let before = padded[padded.startIndex..<range.lowerBound]
+        let words = before.split(separator: " ").map(String.init)
+        return words.suffix(negationReach).contains { bareNegators.contains($0) }
     }
 
     private static func firstVerb(in padded: String) -> (verb: Verb, cue: String, range: Range<String.Index>)? {

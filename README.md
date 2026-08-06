@@ -12,8 +12,8 @@ Every feature starts as an approved spec before any code is written — no vibe 
 | If you want to… | Read |
 |-----------------|------|
 | Understand the product | [`docs/vision.md`](docs/vision.md) |
-| Understand the tech | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
-| Understand the narrative scope | [`GAME_SCOPE.md`](GAME_SCOPE.md) |
+| Understand the tech | [`CLAUDE.md`](CLAUDE.md)'s "Current status" section + [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md) (pre-implementation brief, now historical: [`docs/historical/ARCHITECTURE.md`](docs/historical/ARCHITECTURE.md)) |
+| Understand the narrative scope | `DeepDive/Domain/WorldMap.swift` — all narrative prose (pre-implementation brief, now historical: [`docs/historical/GAME_SCOPE.md`](docs/historical/GAME_SCOPE.md)) |
 | **Understand how we use AI** (specs, skills, subagents) | [`docs/ai-workflow.md`](docs/ai-workflow.md) |
 | Know the rules every AI agent follows | [`CLAUDE.md`](CLAUDE.md) (`AGENTS.md` is a symlink to it) |
 
@@ -35,7 +35,10 @@ Every feature is a spec in [`docs/specs/`](docs/specs/), created from
 | 009 | [Game Loop Redundancy](docs/specs/009-game-loop-redundancy.md) | `implemented` — superseded by [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md) |
 | 010 | [Visual Redesign](docs/specs/010-visual-redesign.md) | `implemented` |
 | 011 | [App Store Submission](docs/specs/011-app-store-submission.md) | `implemented` — pendente das etapas manuais |
-| 012 | [Repetition Window](docs/specs/012-repetition-window.md) | `approved` |
+| 012 | [Repetition Window](docs/specs/012-repetition-window.md) | `implemented` |
+| 013 | [Parser: negação e preâmbulo](docs/specs/013-parser-negacao-e-preambulo.md) | `implemented` |
+| 014 | [Estado, UI e App Intents](docs/specs/014-estado-ui-e-app-intents.md) | `implemented` — 5 critérios pendentes de verificação no aparelho |
+| 015 | [Narração não quebra função](docs/specs/015-narracao-nao-quebra-funcao.md) | `implemented` — 2 critérios sem oportunidade de verificação |
 
 A spec marked *superseded* stays here on purpose: it records what was decided at the time,
 and the ADR it points to explains why the design moved on.
@@ -73,6 +76,6 @@ for why tests aren't a deliverable on this project.
 
 ## Status
 
-Specs 001–011 are implemented and 012 is approved. The app is prepared for App Store
+Specs 001–012 are implemented. The app is prepared for App Store
 submission (see [`docs/submissao.md`](docs/submissao.md)); what remains are the manual
 steps that need Richard's credentials.

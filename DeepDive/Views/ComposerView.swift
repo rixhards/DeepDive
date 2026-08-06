@@ -21,18 +21,22 @@ struct ComposerView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(spacing: 6) {
+                // Stays put while she's answering, dimmed rather than gone: the field owns the
+                // focus state, so removing it closed the keyboard every turn (spec 014).
                 TextField("escreva pra ela...", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .foregroundStyle(Theme.primaryText)
+                    .foregroundStyle(Theme.primaryText.opacity(isDisabled ? 0.4 : 1))
                     .tint(Theme.accentLamp)
                     .focused($isFocused)
                     .disabled(isDisabled)
                     .padding(.top, 6)
+                    .animation(.easeInOut(duration: 0.2), value: isDisabled)
 
                 Rectangle()
-                    .fill(isFocused ? Theme.accentLamp.opacity(0.55) : Theme.hairline)
+                    .fill(isFocused && !isDisabled ? Theme.accentLamp.opacity(0.55) : Theme.hairline)
                     .frame(height: 0.5)
                     .animation(.easeInOut(duration: 0.2), value: isFocused)
+                    .animation(.easeInOut(duration: 0.2), value: isDisabled)
             }
 
             Button(action: onSend) {

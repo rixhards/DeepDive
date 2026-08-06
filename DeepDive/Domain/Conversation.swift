@@ -127,6 +127,24 @@ nonisolated enum Conversation {
                 """,
             ]
         ),
+        Topic(
+            id: "guidance",
+            aliases: ["o que eu faco", "o que eu devo fazer", "o que fazer", "e agora",
+                      "me ajuda", "alguma ideia", "o que voce acha", "o que a gente faz",
+                      "por onde comeco", "nao sei o que fazer"],
+            // Doubles as onboarding: she names the kinds of instruction that work, in her own
+            // voice, which is the only teaching this game gets (spec 013).
+            answers: [
+                """
+                eu não sei. você tá de fora, talvez enxergue melhor que eu. me manda olhar em \
+                volta, ou me diz pra onde ir, ou me pergunta alguma coisa. eu faço.
+                """,
+                """
+                eu tô sem ideia. mas eu obedeço — é só falar. "olha em volta", "pega isso", \
+                "vai por ali". qualquer coisa é melhor do que eu parada aqui.
+                """,
+            ]
+        ),
     ]
 
     /// Finds the topic a question is about, if any.

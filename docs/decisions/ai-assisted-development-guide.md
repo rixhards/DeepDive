@@ -1,5 +1,12 @@
 # AI-Assisted Development Guide
 
+> **Historical study material.** These are class notes on general LLM concepts (context window,
+> RAG, plugins, hooks…), not documentation of anything specific to this project. The factual
+> corrections already made here (token/word ratio, `CLAUDE.md` length, the definition of
+> "harness") are incorporated into [`docs/ai-workflow.md`](../ai-workflow.md), which is the
+> short, accurate, project-specific reference — read that one first. Kept as-is rather than
+> maintained in parallel; if the two ever disagree, `docs/ai-workflow.md` wins.
+
 > Revised version — corrected writing and information verified against Anthropic's official documentation (docs.claude.com) and public sources for the other tools mentioned.
 
 ---

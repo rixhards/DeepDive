@@ -72,8 +72,11 @@ or violated) — **never** a direct "pick ending X" choice, and never random.
 
 Players who enjoy narrative-first horror and interactive fiction — the Bandersnatch /
 choice-driven game audience — on iOS. They want a short, atmospheric session they can play
-one-handed, in the dark, without learning a system. Requires **iOS 26+** (iPhone 11 or later
-with Apple Intelligence).
+one-handed, in the dark, without learning a system. Requires **iOS 26+** (iPhone 11 or later).
+The AI features — free-text intent parsing and dynamic narration via Foundation Models — need
+**Apple Intelligence**, which Apple limits to iPhone 15 Pro and later; on older, eligible
+hardware `LocalActionParser`'s keyword matching and the authored fallback text keep the game
+playable, with less flexible input understanding.
 
 ## Value Proposition
 
@@ -92,7 +95,13 @@ with Apple Intelligence).
 | Validate the game loop | A playtester completes a full mini-scenario without needing an explanation of how to play |
 | Preserve immersion | No playtester reports the UI "feeling like a game menu" instead of a chat |
 | Prove emergent endings | At least 2 distinct endings reached across playtest sessions from choices alone |
-| Keep content data-driven | Adding a new scene requires editing JSON only, never Swift code |
+| Keep narrative content declarative | Adding a new place means listing it as data in `WorldMap.swift` — no control flow, no changes to `ActionResolver` |
+
+> **Revised by [ADR-002](adr/ADR-002-world-simulation-in-swift.md):** this metric originally read
+> "adding a new scene requires editing JSON only, never Swift code." The JSON dialog tree capped
+> the character at 37 authored lines and couldn't answer "where are you" or "what do you have."
+> It was replaced by a Swift world model (`WorldMap.swift`); the golden rule now is "data, not
+> code," not "JSON, not Swift."
 
 ## Language
 
@@ -104,7 +113,8 @@ with Apple Intelligence).
 
 - Multiplayer
 - Monetization
-- Audio / music
+- Audio / music *(infrastructure exists — `AudioManager.swift` — but no audio file has ever
+  been added to the app bundle, so nothing plays; treat the feature itself as unshipped)*
 - Internationalization (i18n)
 
 > Free-text input, on-device AI (Foundation Models), and progress persistence were originally

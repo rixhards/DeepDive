@@ -24,6 +24,18 @@ nonisolated struct ActionResolver {
         }
         if state.isFinished { return endingOutcome(for: state) }
 
+        // "não entra na água" — the player named an act and forbade it. With a question open
+        // this is the answer "no"; otherwise she acknowledges and stays put. Either way the
+        // verb never runs. Before spec 013 negation was read as the verb `.no`, so any
+        // sentence containing "não" — including every reassurance — cancelled her question.
+        if action.isProhibition {
+            if let pending = state.pending {
+                state.pending = nil
+                return Outcome(pending.refusal)
+            }
+            return Outcome(pick(WorldMap.prohibitionLines, state))
+        }
+
         // She asked something and is standing at the edge of it. The question survives
         // anything that isn't an answer or a different act — losing the scene because a
         // message didn't parse was the worst thing this loop did.
@@ -41,11 +53,14 @@ nonisolated struct ActionResolver {
                 return Outcome(pending.refusal)
 
             case .unknown:
-                // She didn't understand, but she hasn't forgotten what she asked.
+                // She didn't understand, but she hasn't forgotten what she asked. Verbatim
+                // because the reminder is a question, and a question that gets reworded into a
+                // statement is a choice the player never gets to make (spec 015).
                 return Outcome(resolveUnknown(state: state).facts.joined(separator: " "),
-                               beats: [pending.reminder])
+                               beats: [pending.reminder],
+                               delivery: .verbatim)
 
-            case .look, .examine, .listen, .smell, .ask, .talk, .inventory:
+            case .look, .examine, .listen, .smell, .ask, .talk, .inventory, .greet:
                 // Passive acts answer without moving her, so the question stays open.
                 reminder = pending.reminder
 
@@ -66,9 +81,12 @@ nonisolated struct ActionResolver {
         var outcome: Outcome
         switch action.verb {
         case .look: outcome = resolveLook(state: &state)
-        case .examine: outcome = resolveExamine(action.target, state: &state)
+        case .examine: outcome = resolveExamine(action, state: &state)
+        case .search: outcome = resolveSearch(action, state: &state)
         case .take: outcome = resolveTake(action, state: &state)
         case .use: outcome = resolveUse(action, state: &state)
+        case .touch: outcome = resolveTouch(action.target, state: &state)
+        case .greet: outcome = Outcome(pick(WorldMap.greetingLines, state))
         case .knock: outcome = resolveKnock(action.target, state: &state)
         case .burn: outcome = resolveBurn(action.target, state: &state)
         case .go: outcome = resolveGo(action.target, state: &state)
@@ -99,9 +117,13 @@ nonisolated struct ActionResolver {
         if state.isFinished, !outcome.narratesEnding {
             return endingOutcome(for: state)
         }
-        // A question she is still waiting on gets restated after a passive answer.
+        // A question she is still waiting on gets restated after a passive answer. The reminder
+        // travels as a beat of this outcome, so the only way to guarantee it survives is to
+        // protect the whole message it rides in — the reply loses its narration, the player
+        // keeps the question (spec 015).
         if let reminder {
             outcome.beats.append(reminder)
+            outcome.makeVerbatim()
         }
         return outcome
     }
@@ -134,7 +156,7 @@ nonisolated struct ActionResolver {
             if state.distressStrikes >= GameState.abandonmentLimit {
                 state.finish(.death)
                 let script = WorldMap.abandonmentDeathScript
-                return Outcome(script.opener, beats: script.beats, raw: true, silentTurns: 3, narratesEnding: true)
+                return Outcome(script.opener, beats: script.beats, delivery: .script, silentTurns: 3, narratesEnding: true)
             }
             state.adjustSanity(by: cost)
             return nil
@@ -146,8 +168,10 @@ nonisolated struct ActionResolver {
         let beat = WorldMap.beat(id)
         let firstTime = !state.visited.contains(id)
         state.visited.insert(id)
-        guard firstTime else { return Outcome(beat.revisit) }
-        return Outcome(beat.arrival, beats: beat.arrivalBeats)
+        // Verbatim: arrivals enumerate the ways out, and are the only floor plan the player
+        // ever gets. A compressed rewrite can silently cost them the map (spec 015).
+        guard firstTime else { return Outcome(beat.revisit, delivery: .verbatim) }
+        return Outcome(beat.arrival, beats: beat.arrivalBeats, delivery: .verbatim)
     }
 
     // MARK: - Committing a choice she already asked about
@@ -205,7 +229,7 @@ nonisolated struct ActionResolver {
         state.currentBeat = beat
         state.visited.insert(beat)
         state.finish(.death)
-        return Outcome(script.opener, beats: script.beats, raw: true, silentTurns: 3, narratesEnding: true)
+        return Outcome(script.opener, beats: script.beats, delivery: .script, silentTurns: 3, narratesEnding: true)
     }
 
     // MARK: - Escapes (one ending, three states of mind)
@@ -218,7 +242,7 @@ nonisolated struct ActionResolver {
         return Outcome(
             WorldMap.steelDoorOpens,
             beats: [WorldMap.steelDoor.arrival, variant.opener] + variant.beats,
-            raw: true,
+            delivery: .script,
             narratesEnding: true
         )
     }
@@ -235,7 +259,7 @@ nonisolated struct ActionResolver {
         return Outcome(
             traversal.opener,
             beats: traversal.beats + [WorldMap.steelDoor.arrival, variant.opener] + variant.beats,
-            raw: true,
+            delivery: .script,
             narratesEnding: true
         )
     }
@@ -268,7 +292,7 @@ nonisolated struct ActionResolver {
         // "vai pela porta" at the trifurcação is ambiguous between two very different doors.
         if state.currentBeat == .trifurcacao, target.matchesAlias("porta"),
            !targetsSteelDoor(target), !targetsWoodDoor(target) {
-            return Outcome("qual porta? a de aço ou a de madeira?")
+            return Outcome("qual porta? a de aço ou a de madeira?", delivery: .verbatim)
         }
 
         let beat = WorldMap.beat(state.currentBeat)
@@ -291,17 +315,17 @@ nonisolated struct ActionResolver {
         switch destination {
         case .waterTrail:
             state.pending = .enterWater
-            return Outcome(PendingChoice.enterWater.question)
+            return Outcome(PendingChoice.enterWater.question, delivery: .verbatim)
 
         case .corridor:
             let choice: PendingChoice = state.has(.lampLit) ? .corridorLampLit : .corridorDark
             state.pending = choice
-            return Outcome(choice.question)
+            return Outcome(choice.question, delivery: .verbatim)
 
         case .hayRoom:
             let choice: PendingChoice = state.has(.knockedWoodDoor) ? .enterHayRoom : .woodDoorUnknocked
             state.pending = choice
-            return Outcome(choice.question)
+            return Outcome(choice.question, delivery: .verbatim)
 
         case .steelDoor:
             return openSteelDoorAndEscape(state: &state)
@@ -333,9 +357,9 @@ nonisolated struct ActionResolver {
         state.visited.insert(destination)
 
         guard firstTime else {
-            return Outcome(beat.revisit, beats: lampFacts)
+            return Outcome(beat.revisit, beats: lampFacts, delivery: .verbatim)
         }
-        return Outcome(beat.arrival, beats: beat.arrivalBeats + lampFacts)
+        return Outcome(beat.arrival, beats: beat.arrivalBeats + lampFacts, delivery: .verbatim)
     }
 
     // MARK: - Looking
@@ -347,11 +371,14 @@ nonisolated struct ActionResolver {
         if !loose.isEmpty {
             facts.append("tem \(loose.map(\.name).joined(separator: " e ")) aqui.")
         }
-        return Outcome(facts.joined(separator: " "))
+        // Verbatim: this is the player's map. The narrator was being told to keep it under
+        // 320 characters and to never redescribe the environment — the exact wrong instruction
+        // for the one message whose job is to describe and enumerate (spec 015).
+        return Outcome(facts.joined(separator: " "), delivery: .verbatim)
     }
 
-    private func resolveExamine(_ target: String?, state: inout GameState) -> Outcome {
-        guard let target, !target.isEmpty else { return resolveLook(state: &state) }
+    private func resolveExamine(_ action: PlayerAction, state: inout GameState) -> Outcome {
+        guard let target = action.target, !target.isEmpty else { return resolveLook(state: &state) }
         let beat = WorldMap.beat(state.currentBeat)
 
         if let feature = beat.feature(matching: target) {
@@ -380,6 +407,51 @@ nonisolated struct ActionResolver {
             "não tem nada disso aqui. eu olhei bem.",
             "isso aí eu não tô vendo em lugar nenhum daqui.",
         ], state))
+    }
+
+    /// Rummaging. Separate from `examine` because looking at the hay describes it and digging
+    /// into it finds the key — same noun, different act (spec 013).
+    private func resolveSearch(_ action: PlayerAction, state: inout GameState) -> Outcome {
+        let target = action.target ?? ""
+        let beat = WorldMap.beat(state.currentBeat)
+
+        // The hay is the one place where searching has rules of its own.
+        if state.currentBeat == .hayRoom,
+           target.isEmpty || ["feno", "palha", "chave", "brilho", "metal"].contains(where: { target.matchesAlias($0) }) {
+            if state.has(.key) {
+                return Outcome("já revirei esse feno. a chave tá comigo e não sobrou mais nada aí dentro.")
+            }
+            return resolveHaySearch(instrument: action.instrument.flatMap(matchItem), state: &state)
+        }
+
+        // Searching nothing in particular is searching the room.
+        guard !target.isEmpty else { return resolveLook(state: &state) }
+
+        // Something that's actually here: searching for it is looking at it.
+        if beat.feature(matching: target) != nil || matchItem(target).map({ state.has($0) }) == true {
+            return resolveExamine(action, state: &state)
+        }
+
+        // "procura uma saída" is answered by the place itself.
+        if targetsWayOut(target) { return resolveLook(state: &state) }
+
+        return Outcome(pick(WorldMap.foundNothingLines, state))
+    }
+
+    /// Putting a hand on the scenery. Always answers, and always costs a little — but only
+    /// when the player asked for it in those words. This used to be the fallback for every
+    /// `use` the resolver couldn't place, which is how "não entra na água" ended with her
+    /// hand in the water (spec 013).
+    private func resolveTouch(_ target: String?, state: inout GameState) -> Outcome {
+        let target = target ?? ""
+        guard let feature = WorldMap.beat(state.currentBeat).feature(matching: target) else {
+            return Outcome(pick(WorldMap.nothingToTouchLines, state))
+        }
+        state.adjustSanity(by: -2)
+        return Outcome("""
+        encostei. \(feature.id == "agua" ? "a água tá morna, morna demais" : "a superfície tá úmida e viscosa") \
+        e eu juro que reagiu ao meu toque. eu tirei a mão na hora.
+        """)
     }
 
     /// Each reading costs more than the last (the authored scale). When the scale is spent
@@ -424,7 +496,7 @@ nonisolated struct ActionResolver {
     private func resolveInventory(state: GameState) -> Outcome {
         let carried = ItemID.allCases.filter { state.has($0) }
         guard !carried.isEmpty else {
-            return Outcome("eu não tô com nada. só a roupa do corpo.")
+            return Outcome("eu não tô com nada. só a roupa do corpo.", delivery: .verbatim)
         }
         let list = carried.map(\.name).joined(separator: ", ")
         var lampStatus = ""
@@ -439,7 +511,7 @@ nonisolated struct ActionResolver {
                 lampStatus = " o lampião tá apagado."
             }
         }
-        return Outcome("tô com \(list).\(lampStatus)")
+        return Outcome("tô com \(list).\(lampStatus)", delivery: .verbatim)
     }
 
     // MARK: - Using things
@@ -476,7 +548,7 @@ nonisolated struct ActionResolver {
                 return approach(.hayRoom, state: &state)
             }
             if target.matchesAlias("porta") {
-                return Outcome("qual porta? a de aço ou a de madeira?")
+                return Outcome("qual porta? a de aço ou a de madeira?", delivery: .verbatim)
             }
             if target.matchesAlias("corredor") || target.matchesAlias("túnel") {
                 return approach(.corridor, state: &state)
@@ -486,16 +558,18 @@ nonisolated struct ActionResolver {
             break
         }
 
-        // Touching the scenery: always answers, and always costs a little.
-        if let feature = WorldMap.beat(state.currentBeat).feature(matching: target) {
-            state.adjustSanity(by: -2)
-            return Outcome("""
-            encostei. \(feature.id == "agua" ? "a água tá morna, morna demais" : "a superfície tá úmida e viscosa") \
-            e eu juro que reagiu ao meu toque. eu tirei a mão na hora.
-            """)
-        }
+        // Fail-safe. She could not place what she's being asked to act on, so she asks instead
+        // of doing something to whatever noun happened to be in the sentence. This branch used
+        // to reach for the nearest feature and charge sanity for touching it — which is how
+        // "Vai pela estrada de pedra, nao entra na agua" put her hand in the water. An
+        // instruction she didn't understand must never cost her anything (spec 013).
+        return Outcome(pick(WorldMap.unclearActionLines, state))
+    }
 
-        return Outcome("eu tentei, mas não deu em nada.")
+    /// Words for "a way out of here", which the world answers with the room itself.
+    private func targetsWayOut(_ target: String) -> Bool {
+        ["saida", "saída", "saidas", "saídas", "passagem", "caminho", "caminhos", "rota", "jeito de sair"]
+            .contains { target.matchesAlias($0) }
     }
 
     private func resolveSteelDoorUse(instrument: ItemID?, state: inout GameState) -> Outcome {
@@ -504,7 +578,7 @@ nonisolated struct ActionResolver {
             return openSteelDoorAndEscape(state: &state)
         case .knife:
             state.pending = .lockpickSteelDoor
-            return Outcome(PendingChoice.lockpickSteelDoor.question)
+            return Outcome(PendingChoice.lockpickSteelDoor.question, delivery: .verbatim)
         case .lamp, nil:
             // She reaches for the key herself if she has it — the player shouldn't have to
             // name the tool she's obviously carrying.
@@ -538,11 +612,11 @@ nonisolated struct ActionResolver {
 
         case .lamp:
             state.pending = .burnHay
-            return Outcome(PendingChoice.burnHay.question)
+            return Outcome(PendingChoice.burnHay.question, delivery: .verbatim)
 
         case .key, nil:
             state.pending = .takeKeyBareHands
-            return Outcome(PendingChoice.takeKeyBareHands.question)
+            return Outcome(PendingChoice.takeKeyBareHands.question, delivery: .verbatim)
         }
     }
 
@@ -564,7 +638,7 @@ nonisolated struct ActionResolver {
         if state.currentBeat == .trifurcacao {
             let choice: PendingChoice = state.has(.lampLit) ? .snuffLampBeforeDark : .lightLampBeforeDark
             state.pending = choice
-            return Outcome(choice.question)
+            return Outcome(choice.question, delivery: .verbatim)
         }
 
         if state.has(.lampLit) {
@@ -613,7 +687,7 @@ nonisolated struct ActionResolver {
                 return Outcome("com o quê? o lampião morreu, não sobrou fogo nenhum comigo.")
             }
             state.pending = .burnHay
-            return Outcome(PendingChoice.burnHay.question)
+            return Outcome(PendingChoice.burnHay.question, delivery: .verbatim)
         }
 
         return Outcome("botar fogo nisso não ia ajudar em nada. e o lampião é a única luz que eu tenho.")
@@ -736,7 +810,7 @@ nonisolated struct ActionResolver {
         switch state.ending {
         case .madness:
             let script = WorldMap.madnessScript
-            return Outcome(script.opener, beats: script.beats, raw: true, narratesEnding: true)
+            return Outcome(script.opener, beats: script.beats, delivery: .script, narratesEnding: true)
         case .death, .escape, nil:
             return Outcome("")
         }

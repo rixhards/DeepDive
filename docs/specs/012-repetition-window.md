@@ -69,14 +69,19 @@ de fallback exigir conteúdo real, não apenas texto não-vazio.
 
 ## Critérios de Aceite
 
+> Os dois itens marcados `[~]` abaixo eram verdadeiros quando esta spec foi escrita
+> (`8d60917`, 2026-07-31) e ninguém voltou para atualizá-los: o test target `DeepDiveTests`
+> foi removido no commit `d07fc52` (2026-08-01), um commit **depois**. A justificativa
+> original — "não editar, os testes dependem disso" — caducou junto com os testes.
+
 - [x] `NarrationRequest` carrega as últimas falas (`recentReplies`), não uma única `previousReply`
 - [x] `ChatViewModel` mantém essa janela com tamanho máximo fixo e a limpa em `restart()`
 - [x] `stripRepeats` compara contra todas as falas da janela
-- [x] A sobrecarga `stripRepeats(in:avoiding: String)` continua existindo — os testes atuais em `NarratorTests` usam essa assinatura e seguiram compilando sem edição
+- [~] ~~A sobrecarga `stripRepeats(in:avoiding: String)` continua existindo — os testes atuais em `NarratorTests` usam essa assinatura e seguiram compilando sem edição~~ — desatualizado. Sem `NarratorTests` (removido em `d07fc52`), essa sobrecarga ficou sem nenhum chamador no código e foi removida de `FoundationModelsNarrator.swift`; só a versão de array (`avoiding previous: [String]`) permanece.
 - [x] `DeepDiveIntents` passa a janela pelo mesmo caminho
 - [x] A guarda de fallback exige conteúdo (`hasSubstance`), não apenas texto não-vazio
 - [x] O projeto compila sem erro nem warning
-- [x] Suíte completa passando: **81 testes, 0 falhas**
+- [~] ~~Suíte completa passando: **81 testes, 0 falhas**~~ — desatualizado. Não existe mais suíte de testes no projeto (`DeepDiveTests` removido em `d07fc52`, posterior a esta spec). A verificação hoje é build limpo (`xcodebuild … build`) + playtest manual no device/simulador.
 - [x] Aberturas do zero no simulador, com Foundation Models ativo, sem nenhuma repetição
 
 ### Como foi validado
@@ -136,6 +141,11 @@ comportamento desejado.
 
 Mudança aditiva, conforme a regra do `CLAUDE.md` de manter os testes compilando: a versão
 `String` de `stripRepeats` continua existindo e delega para a versão de array.
+
+> **Atualização posterior:** a versão `String` foi removida depois que `DeepDiveTests` (e com
+> ele `NarratorTests`, o único chamador dessa assinatura) deixou de existir — ver o critério de
+> aceite acima. Hoje só a versão de array (`avoiding previous: [String]`) existe em
+> `FoundationModelsNarrator.swift`.
 
 `NarrationRequest.recentReplies` entra com valor padrão `[]`, então o helper `request(facts:)`
 de `NarratorTests` segue válido sem alteração.

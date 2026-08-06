@@ -12,10 +12,18 @@ nonisolated enum Verb: String, Codable, CaseIterable, Sendable {
     case look
     /// Look closely at one specific thing.
     case examine
+    /// Rummage: dig through, hunt for. Distinct from `examine` because "olha pro feno"
+    /// describes the hay and "revira o feno" reaches into it, and only one of those finds
+    /// the key.
+    case search
     /// Pick something up.
     case take
-    /// Interact with something, optionally with an item: touch, push, open, cut.
+    /// Interact with something, optionally with an item: push, open, cut, light.
     case use
+    /// Deliberately put a hand on something. Its own verb because touching the scenery costs
+    /// sanity, and that cost must only ever be paid when the player actually asked for it —
+    /// it used to be the fallback for every `use` the resolver couldn't place (spec 013).
+    case touch
     /// Knock on something. Its own verb because knocking on the wood door is the one thing
     /// that makes the hay room survivable — it must never blur into "open".
     case knock
@@ -28,6 +36,10 @@ nonisolated enum Verb: String, Codable, CaseIterable, Sendable {
     case wait
     /// Ask her about herself — how she is, whether she's hurt, reassurance.
     case talk
+    /// "oi", "ok", "beleza". Not a world action and not a question about her — but the very
+    /// first thing a player types after she writes "oi? tem alguém aí?", and it used to come
+    /// back as "eu não entendi" (spec 013).
+    case greet
     /// Ask her a question about who she is, what happened, or where she thinks she is.
     /// The most natural first thing a player types, and it is not a world action.
     case ask
@@ -74,12 +86,23 @@ nonisolated struct PlayerAction: Equatable, Sendable {
     var instrument: String?
     /// How the player's words land on her, independent of what they ask for.
     var tone: Tone
+    /// The player told her *not* to do this ("não entra na água"). Negation is a modifier on
+    /// the attempt, never a verb of its own — reading it as the verb `.no` is what made every
+    /// sentence containing "não" cancel whatever she was about to ask (spec 013).
+    var isProhibition: Bool
 
-    init(verb: Verb, target: String? = nil, instrument: String? = nil, tone: Tone = .neutral) {
+    init(
+        verb: Verb,
+        target: String? = nil,
+        instrument: String? = nil,
+        tone: Tone = .neutral,
+        isProhibition: Bool = false
+    ) {
         self.verb = verb
         self.target = target
         self.instrument = instrument
         self.tone = tone
+        self.isProhibition = isProhibition
     }
 }
 

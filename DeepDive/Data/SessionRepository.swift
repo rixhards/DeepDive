@@ -41,17 +41,29 @@ nonisolated struct SessionRepository {
         self.modelContext = ModelContext(container)
     }
 
-    /// Upserts the single save slot — never accumulates multiple records.
-    func save(_ session: GameSession) throws {
-        let payload = try JSONEncoder().encode(session)
+    /// Upserts the single save slot — never accumulates multiple records — and stamps it with
+    /// the next revision. The new revision is `max(what the caller had, what is on disk) + 1`,
+    /// so it stays monotonic even when the app and an App Intent write in the same moment; the
+    /// caller keeps the returned value to know whether a later read is ahead of it (spec 014).
+    @discardableResult
+    func save(_ session: GameSession) throws -> Int {
+        let record = try existingRecord()
+        let onDisk = record
+            .flatMap { try? JSONDecoder().decode(GameSession.self, from: $0.payload) }?
+            .revision ?? 0
 
-        if let record = try existingRecord() {
+        var stamped = session
+        stamped.revision = max(session.revision, onDisk) + 1
+        let payload = try JSONEncoder().encode(stamped)
+
+        if let record {
             record.payload = payload
             record.schemaVersion = Self.schemaVersion
         } else {
             modelContext.insert(SavedGame(payload: payload))
         }
         try modelContext.save()
+        return stamped.revision
     }
 
     /// Returns `nil` when there's no save, the save is from an older schema, or it's corrupt

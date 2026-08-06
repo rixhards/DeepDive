@@ -59,6 +59,17 @@ final class FoundationModelsNarrator: Narrator {
             await self?.respond(session, to: prompt) ?? .failure
         }
 
+        // Timed out. `cancelAll()` only *asks* — the orphaned generation still owns this
+        // session, and every later message in the beat would fail against it, so the whole
+        // scene would come out as raw facts. Throw the session away now and let the next
+        // message build a fresh one (spec 015).
+        if attempt == nil {
+            print("FoundationModelsNarrator: timed out after \(timeoutSeconds)s — discarding the session so the next message isn't poisoned")
+            self.session = nil
+            self.sessionBeat = nil
+            return plain
+        }
+
         // The proactive check can only estimate; if the window still overflowed, rebuild
         // the session from memory and give the same prompt one more chance.
         if case .contextOverflow = attempt ?? .failure {
@@ -85,7 +96,41 @@ final class FoundationModelsNarrator: Narrator {
         // ("oi?") passed the guard, so she sent a bubble containing only that.
         let deduped = Self.stripRepeats(in: cleaned, avoiding: request.recentReplies)
         guard Self.hasSubstance(deduped) else { return plain }
+
+        // The narrator may change how she says something; it may not change whether the thing
+        // still does its job. These two checks are the general net behind the per-outcome
+        // `Delivery.verbatim` marking — most questions never reach here at all now, but
+        // anything that slips through still has to survive intact (spec 015).
+        guard Self.preservesQuestion(deduped, facts: plain) else {
+            print("FoundationModelsNarrator: narration dropped the question — falling back to the authored facts")
+            return plain
+        }
+        guard Self.keepsBulk(deduped, facts: plain) else {
+            print("FoundationModelsNarrator: narration collapsed to \(deduped.count) of \(plain.count) chars — falling back to the authored facts")
+            return plain
+        }
         return String(deduped.prefix(400))
+    }
+
+    /// If the facts asked something, the narration has to ask something too. A question the
+    /// player never sees is a choice they cannot make — and in this game the choice is usually
+    /// whether she walks into something that kills her.
+    private nonisolated static func preservesQuestion(_ narrated: String, facts: String) -> Bool {
+        guard facts.contains("?") else { return true }
+        return narrated.contains("?")
+    }
+
+    /// Below this share of the authored length, the model dropped content rather than trimming
+    /// wordiness.
+    private nonisolated static let minimumBulkRatio = 3
+
+    /// Short facts are legitimately answered by short lines, so the floor only applies once
+    /// there was enough text for shrinking to mean losing something.
+    private nonisolated static let bulkFloorAppliesAbove = 60
+
+    private nonisolated static func keepsBulk(_ narrated: String, facts: String) -> Bool {
+        guard facts.count > bulkFloorAppliesAbove else { return true }
+        return narrated.count * minimumBulkRatio >= facts.count
     }
 
     /// One word for how she's holding up. Kept qualitative on purpose — a number in the
@@ -312,11 +357,6 @@ final class FoundationModelsNarrator: Narrator {
     /// reply still says something, or whether the authored facts should be sent instead.
     nonisolated static func hasSubstance(_ text: String) -> Bool {
         sentences(in: text).contains { key($0).count > fragmentKeyLength }
-    }
-
-    /// Internal so it's testable: pure string logic, no model call.
-    nonisolated static func stripRepeats(in text: String, avoiding previous: String) -> String {
-        stripRepeats(in: text, avoiding: [previous])
     }
 
     /// Comparing against only the last reply let the model echo a whole message from two

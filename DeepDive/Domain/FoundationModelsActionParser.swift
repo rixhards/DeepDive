@@ -18,12 +18,30 @@ import FoundationModels
 @Generable
 struct InterpretedAction {
     @Guide(description: """
-    The verb that best matches what the player wants the character to do. Use "look" for taking \
-    in the whole place, "examine" for looking closely at one specific thing, "take" for picking \
-    something up, "use" for touching/opening/cutting/lighting, "knock" for knocking on a door, \
-    "burn" for setting something on fire, "go" for moving somewhere, "wait" for deliberately \
-    doing nothing, "talk" for asking how she is or reassuring her, "inventory" for asking what \
-    she is carrying, and "unknown" when nothing fits.
+    O verbo que melhor descreve o que o jogador quer que a personagem faça. Responda com \
+    exatamente uma destas palavras, em inglês:
+    "look" — abranger o lugar todo ("olha em volta", "o que você tá vendo?").
+    "examine" — olhar de perto uma coisa específica ("olha pro teto").
+    "search" — remexer, vasculhar, procurar dentro de algo ("revira o feno", "procura uma saída").
+    "take" — pegar/recolher um objeto.
+    "use" — abrir, empurrar, cortar, forçar, acender, apagar, destrancar.
+    "touch" — encostar a mão de propósito ("toca na água", "passa a mão na parede").
+    "knock" — bater numa porta.
+    "burn" — botar fogo em alguma coisa.
+    "go" — se deslocar para outro lugar.
+    "wait" — deliberadamente não fazer nada.
+    "talk" — perguntar como ela está, confortar, tranquilizar.
+    "greet" — cumprimentar ou só reconhecer ("oi", "ok", "beleza", "entendi").
+    "ask" — perguntar sobre ela, sobre o que aconteceu, ou o que fazer agora.
+    "inventory" — perguntar o que ela está carregando.
+    "listen" — prestar atenção nos sons.
+    "smell" — sentir o cheiro do lugar.
+    "shout" — gritar, chamar alguém em voz alta.
+    "hide" — se esconder.
+    "rest" — sentar, descansar, recuperar o fôlego.
+    "yes" — CONFIRMAR uma pergunta que ela acabou de fazer ("sim", "pode ir", "manda").
+    "no" — RECUSAR uma pergunta que ela acabou de fazer ("não", "melhor não", "deixa pra lá").
+    "unknown" — só quando nada acima serve.
     """)
     var verb: String
 

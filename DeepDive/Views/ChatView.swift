@@ -16,6 +16,9 @@ struct ChatView: View {
     /// legible and only the vignette carries the degradation (spec 010, casos de borda).
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
+    /// Coming back to the app is when we find out an App Intent took a turn while we were away.
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         Group {
             if viewModel.isFinished {
@@ -35,6 +38,9 @@ struct ChatView: View {
         .animation(.easeInOut(duration: 0.6), value: viewModel.isFinished)
         .background(Theme.background.ignoresSafeArea())
         .onAppear { viewModel.start() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { viewModel.refreshFromDisk() }
+        }
         .confirmationDialog(
             "recomeçar a partida?",
             isPresented: $isConfirmingRestart,
@@ -93,11 +99,12 @@ struct ChatView: View {
                     }
                 }
 
-                if !viewModel.isTyping {
-                    ComposerView(text: $inputText, isDisabled: false) {
-                        viewModel.send(inputText)
-                        inputText = ""
-                    }
+                // Always in the hierarchy, only disabled. Removing it took `@FocusState` with
+                // it, so the keyboard was dismissed on every single turn — and again between
+                // each message of a scene (spec 014).
+                ComposerView(text: $inputText, isDisabled: viewModel.isTyping) {
+                    viewModel.send(inputText)
+                    inputText = ""
                 }
             }
             .overlay(

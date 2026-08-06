@@ -1,5 +1,24 @@
 # Escopo do Jogo — Refactor (versão reduzida e final)
 
+> **Documento histórico, arquivado em `docs/historical/`.** Isto é um briefing
+> pré-implementação — foi escrito para orientar um agente ANTES do código existir, e **não
+> descreve o sistema atual**. A arquitetura vigente é a simulação de mundo em Swift descrita em
+> [`ADR-002`](../adr/ADR-002-world-simulation-in-swift.md). Mantido apenas como registro
+> histórico do escopo original.
+>
+> **Divergências conhecidas entre este documento e o código atual:**
+> - O código tem **5 cenas de morte**, não 4 — foi adicionada a morte por abandono
+>   (`GameState.abandonmentLimit`), a pedido do product owner depois deste documento.
+> - O lugar **nunca é nomeado "Ratanabá"** para o jogador; a única ocorrência da palavra no
+>   código é um comentário de tom em `WorldMap.swift`, não texto narrativo.
+> - **"Nyarlathotep" não aparece** em nenhum lugar do código.
+> - A seção "Áudio" abaixo exige música ambiente, mas **nenhum arquivo de áudio foi adicionado
+>   ao bundle** — a infraestrutura existe (`DeepDive/Views/AudioManager.swift`), sem áudio de
+>   fato.
+> - A regra "é possível voltar de qualquer cena atual" (abaixo) é **inimplementável como
+>   escrita**: 3 dos 6 beats do mapa atual (`waterTrail`, `corridor`, `steelDoor`) têm
+>   `exits: []` no código — não há como voltar deles.
+
 > Este documento é a fonte da verdade do conteúdo narrativo do jogo.
 > Leia também `ARCHITECTURE.md` (stack técnica: Foundation Models, App
 > Intents/Shortcuts, gerenciamento de contexto, princípio de "LLM não decide

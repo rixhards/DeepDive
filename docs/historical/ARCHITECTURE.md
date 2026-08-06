@@ -1,5 +1,21 @@
 # Arquitetura — Jogo de Terror Psicológico em Chat (iOS/Swift)
 
+> **Documento histórico, arquivado em `docs/historical/`.** Isto é um briefing
+> pré-implementação — foi escrito para orientar um agente ANTES do código existir, e **não
+> descreve o sistema atual**. A arquitetura vigente é a simulação de mundo em Swift descrita em
+> [`ADR-002`](../adr/ADR-002-world-simulation-in-swift.md). Mantido apenas como registro
+> histórico da arquitetura originalmente planejada.
+>
+> **Divergências conhecidas entre este documento e o código atual:**
+> - Declara `GameState { trustLevel: Int }`; o campo real é `sanity` (`trustLevel` tem zero
+>   ocorrências no código — o `trust` foi removido no spec 008).
+> - Diz "100% construído via Claude Code"; `README.md`/`CLAUDE.md` descrevem uma divisão onde o
+>   Antigravity escreve specs, arquitetura e faz review, e o Claude Code implementa.
+> - Recomenda "2 subagents: revisão e testes"; hoje existe apenas `spec-reviewer`, e não há
+>   test target no projeto (removido no commit `d07fc52`).
+> - Não menciona `LocalActionParser.swift` (290 linhas), que hoje decide quase todo o
+>   comportamento em produção — o parser determinístico não existia quando isto foi escrito.
+
 > Documento de handoff. Leia isto antes de começar a implementar.
 > Objetivo do jogo: jogador troca mensagens de texto com uma personagem; a
 > história avança conforme as respostas do jogador. Gênero: terror psicológico.

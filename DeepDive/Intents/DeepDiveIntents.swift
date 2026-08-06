@@ -51,8 +51,8 @@ enum GameTurnService {
         let narrator = FoundationModelsNarrator()
         var lines: [String] = []
         for outcome in outcomes {
-            guard !outcome.raw else {
-                // Authored climaxes go out exactly as written.
+            guard !outcome.delivery.skipsNarrator else {
+                // Authored climaxes, questions and room descriptions go out exactly as written.
                 lines.append(contentsOf: outcome.allTexts.filter { !$0.isEmpty })
                 continue
             }
@@ -80,7 +80,14 @@ enum GameTurnService {
             // Same contract as the app: a finished run doesn't resume.
             try? repository.delete()
         } else {
-            try? repository.save(GameSession(state: state, memory: memory, messages: messages))
+            // Carrying the revision forward is what lets the app notice, on its next
+            // foreground, that this turn happened while it wasn't looking (spec 014).
+            _ = try? repository.save(GameSession(
+                state: state,
+                memory: memory,
+                messages: messages,
+                revision: saved.revision
+            ))
         }
 
         return reply.isEmpty ? WorldMap.intentNoActiveRun : reply
@@ -109,7 +116,12 @@ enum GameTurnService {
         if state.isFinished {
             try? repository.delete()
         } else {
-            try? repository.save(GameSession(state: state, memory: memory, messages: messages))
+            _ = try? repository.save(GameSession(
+                state: state,
+                memory: memory,
+                messages: messages,
+                revision: saved.revision
+            ))
         }
         return line
     }

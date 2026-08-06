@@ -80,8 +80,10 @@ kept for future-you.
 
 This list is about *development-tooling* concepts (how Claude Code/Antigravity work), not
 the shipped app's own AI feature. The game's runtime AI (`ActionParser` + `Narrator`, both
-Foundation Models, Specs 006–007) **is** implemented — see `ARCHITECTURE.md` — and is a
-separate concern from the list above.
+Foundation Models, Specs 006–007) **is** implemented — see the "Current status" section of
+`CLAUDE.md` and [ADR-002](adr/ADR-002-world-simulation-in-swift.md) (`docs/historical/ARCHITECTURE.md`
+is the pre-implementation brief, kept only as a historical record) — and is a separate concern
+from the list above.
 
 ## Corrections to the class notes (`ai-assisted-development-guide.md`)
 

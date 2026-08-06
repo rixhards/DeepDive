@@ -60,7 +60,10 @@ do not silently guess scope.
 | Persistence | SwiftData, single auto-saved session slot |
 | Runtime AI | Foundation Models — `ActionParser` (free text → verb + target) + `Narrator` (facts → in-character prose). `LocalActionParser` handles common phrasings with no AI, so the game runs in the Simulator too |
 
-Details and diagrams: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Details and diagrams: [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md) plus the file
+list under "Current status" below. The original pre-implementation brief is archived at
+[`docs/historical/ARCHITECTURE.md`](docs/historical/ARCHITECTURE.md) and no longer matches the
+code.
 
 ## Language rule
 
@@ -116,8 +119,10 @@ Details and diagrams: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 ## Where things live
 
 - `docs/vision.md` — product vision
-- `ARCHITECTURE.md` — technical architecture & data flow
-- `GAME_SCOPE.md` — narrative scope: scenes, items, mechanics, endings
+- `docs/historical/ARCHITECTURE.md` — pre-implementation architecture brief; **historical**,
+  superseded by [ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md)
+- `docs/historical/GAME_SCOPE.md` — pre-implementation narrative brief; **historical**, superseded
+  by `WorldMap.swift`
 - `docs/ai-workflow.md` — **how this project uses AI** (specs, skills, subagents, MCP…) — read if unsure how any of this works
 - `docs/specs/` — specs (the SDD contracts); `_template.md` to start a new one
 - `docs/adr/` — architecture decision records
@@ -127,9 +132,11 @@ Details and diagrams: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Current status (2026-07-29)
 
-**The scope-reduction refactor is done.** Its sources of truth live at the repo root:
-`ARCHITECTURE.md` (stack, state shape, Foundation Models context strategy, App Intents) and
-`GAME_SCOPE.md` (scenes, items, mechanics, endings).
+**The scope-reduction refactor is done.** Its source of truth is
+[ADR-002](docs/adr/ADR-002-world-simulation-in-swift.md) plus the files listed below — not
+`docs/historical/ARCHITECTURE.md` / `docs/historical/GAME_SCOPE.md`, which are archived
+pre-implementation briefs that predate this refactor and still describe the JSON dialog tree it
+replaced.
 
 The loop is: player text → `ActionParser` extracts a **verb + target + tone** →
 `ActionResolver` decides the outcome against `GameState` → `Narrator` says it in her voice.
@@ -167,7 +174,8 @@ and the two model-backed types (`FoundationModels*`) stay main-actor, the engine
 Map: salão (spawn) → trilha na água (fatal) / trifurcação (hub) → corredor (fatal with the
 lamp lit, bypass in the dark), porta de aço (escape, needs the key) and sala do feno (knock
 first; the key is in the hay). Three endings: **escape** (sanity variants: ≥80 whole /
-40–79 shaken / <40 refuses to leave), **death** (4 scripted scenarios) and **madness**
+40–79 shaken / <40 refuses to leave), **death** (5 scripted scenarios, including abandonment)
+and **madness**
 (sanity 0). Death, madness and escape scenes are pre-authored scripts delivered verbatim —
 never model-generated (Foundation Models guardrails can refuse dark content).
 
